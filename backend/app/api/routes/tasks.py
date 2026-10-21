@@ -8,6 +8,7 @@ from app.api.dependencies import get_current_user
 from app.db import get_db
 from app.models import User
 from app.models_tasks import Task, TimeEntry
+from app.models_tutoring import Student
 from app.task_schemas import (
     TaskCreate,
     TaskRead,
@@ -39,6 +40,13 @@ def get_owned_entry(db: Session, user_id: UUID, entry_id: UUID) -> TimeEntry:
 def validate_task_link(db: Session, user_id: UUID, task_id: UUID | None) -> None:
     if task_id is not None:
         get_owned_task(db, user_id, task_id)
+
+
+def validate_student_link(db: Session, user_id: UUID, student_id: UUID | None) -> None:
+    if student_id is not None and db.scalar(
+        select(Student.id).where(Student.id == student_id, Student.user_id == user_id)
+    ) is None:
+        raise HTTPException(status_code=404, detail="Student not found")
 
 
 @router.get("/tasks", response_model=list[TaskRead])
@@ -133,6 +141,7 @@ def create_time_entry(
     user: User = Depends(get_current_user),  # noqa: B008
 ) -> TimeEntry:
     validate_task_link(db, user.id, payload.task_id)
+    validate_student_link(db, user.id, payload.student_id)
     duration = int((payload.ended_at - payload.started_at).total_seconds())
     if duration <= 0 or duration > 31_536_000:
         raise HTTPException(
@@ -142,6 +151,7 @@ def create_time_entry(
     entry = TimeEntry(
         user_id=user.id,
         task_id=payload.task_id,
+        student_id=payload.student_id,
         category=payload.category,
         notes=payload.notes,
         started_at=payload.started_at,
@@ -172,6 +182,8 @@ def update_time_entry(
         raise HTTPException(status_code=422, detail="Timestamps cannot be null")
     if "task_id" in changes:
         validate_task_link(db, user.id, changes["task_id"])
+    if "student_id" in changes:
+        validate_student_link(db, user.id, changes["student_id"])
     new_start = changes.get("started_at", entry.started_at)
     new_end = changes.get("ended_at", entry.ended_at)
     if new_end <= new_start:
