@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Activity, ArrowRight, Bell, BookOpen, CalendarDays, Check, ChevronDown, CircleHelp, Clock3, Command, Compass, GraduationCap, LayoutDashboard, ListTodo, Plus, Search, Settings2, Sparkles, Timer, UsersRound, Wallet, Zap } from 'lucide-react'
+import { ArrowRight, Bell, BookOpen, CalendarDays, Check, ChevronDown, CircleHelp, Clock3, Command, Compass, GraduationCap, LayoutDashboard, ListTodo, Plus, Search, Settings2, Sparkles, Timer, UsersRound, Wallet, Zap } from 'lucide-react'
 
 type Task = { id: number; title: string; area: string; time: string; done: boolean; color: string }
 const seedTasks: Task[] = [
