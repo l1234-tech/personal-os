@@ -23,8 +23,18 @@ def upgrade() -> None:
         sa.Column("category", sa.String(length=64), nullable=False, server_default="personal"),
         sa.Column("due_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("estimated_minutes", sa.Integer(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
         sa.CheckConstraint(
             "estimated_minutes IS NULL OR estimated_minutes > 0",
             name="ck_tasks_estimate_positive",
