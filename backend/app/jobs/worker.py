@@ -1,6 +1,5 @@
-import json
+import hashlib
 import logging
-import os
 import signal
 import time
 from datetime import UTC, datetime, timedelta
@@ -8,7 +7,7 @@ from typing import Any
 from uuid import UUID
 
 import httpx
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.config import settings
@@ -219,7 +218,7 @@ def handle_job(db, job: BackgroundJob) -> None:
         if not token or not chat_id or not telegram_user_id:
             retry_or_fail(db, job, "invalid_link_payload")
             return
-        token_hash = __import__("hashlib").sha256(token.encode("utf-8")).hexdigest()
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
         link = db.scalar(
             select(TelegramLinkToken)
             .where(TelegramLinkToken.token_hash == token_hash)
