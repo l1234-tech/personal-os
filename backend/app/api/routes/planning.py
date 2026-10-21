@@ -1,22 +1,19 @@
-import hashlib
 from datetime import UTC, datetime
+from uuid import UUID
 from urllib.parse import quote
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
-from app.core.config import settings
 from app.db import get_db
-from app.integration_schemas import CalendarEventRead
 from app.integrations.google_calendar import (
     GOOGLE_CALENDAR_API,
     calendar_events_url,
     get_access_token,
-    require_google_oauth_settings,
 )
 from app.models import User
 from app.models_integrations import (
@@ -31,7 +28,7 @@ from app.planning_schemas import TaskBlockConflict, TaskBlockCreate, TaskBlockRe
 router = APIRouter(prefix="/planning", tags=["planning"])
 
 
-def get_owned_block(db: Session, user_id, block_id) -> TaskBlock:
+def get_owned_block(db: Session, user_id: UUID, block_id: UUID) -> TaskBlock:
     block = db.scalar(
         select(TaskBlock).where(TaskBlock.id == block_id, TaskBlock.user_id == user_id)
     )
@@ -40,7 +37,7 @@ def get_owned_block(db: Session, user_id, block_id) -> TaskBlock:
     return block
 
 
-def get_calendar_integration(db: Session, user_id) -> Integration:
+def get_calendar_integration(db: Session, user_id: UUID) -> Integration:
     integration = db.scalar(
         select(Integration).where(
             Integration.user_id == user_id,
@@ -79,7 +76,7 @@ def list_task_blocks(
 
 @router.get("/blocks/{block_id}/conflicts", response_model=list[TaskBlockConflict])
 def get_block_conflicts(
-    block_id,
+    block_id: UUID,
     db: Session = Depends(get_db),  # noqa: B008
     user: User = Depends(get_current_user),  # noqa: B008
 ) -> list[TaskBlockConflict]:
@@ -210,7 +207,6 @@ def publish_confirmed_block(
         )
 
     integration = get_calendar_integration(db, user.id)
-    _, _, _, _ = require_google_oauth_settings()
     selections = db.scalars(
         select(CalendarSelection).where(
             CalendarSelection.integration_id == integration.id,
