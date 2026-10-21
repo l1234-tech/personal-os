@@ -55,3 +55,41 @@ This file is the durable resume point for future work sessions. Read it before c
 - Work in small focused commits, inspect CI failures and rerun checks.
 - On stop, update this file with branch/commit, completed work, test results, risks and exact next action.
 - Never claim checks passed unless GitHub Actions or local execution confirms them.
+
+
+## Stop checkpoint — 2026-10-22
+
+### Exact repository state
+- Branch: `feat/auth-security`
+- Exact branch HEAD: `7083c202d76143638685d48a5076a57778612208`
+- Auth PR #3: https://github.com/l1234-tech/personal-os/pull/3 — open, draft, base `feat/foundation`; not merged.
+- This checkpoint commit updates documentation only; no new application-code changes were started after the requested stop.
+
+### CI status at checkpoint
+Both latest workflow runs for the exact current HEAD completed successfully:
+- Backend + frontend run 39686961537: success — https://github.com/l1234-tech/personal-os/actions/runs/39686961537
+- Backend + frontend run 39686952679: success — https://github.com/l1234-tech/personal-os/actions/runs/39686952679
+
+Older runs on earlier commits failed or were cancelled during rapid commits. The failures seen earlier included frontend TypeScript issues (now fixed) and Ruff lint issues in auth tests (now fixed). Those historical failures do not describe the current HEAD, but the code still needs human/security review and deeper validation.
+
+### Work completed
+- Auth models/migration and invite-only registration, login, logout, and `GET /api/v1/auth/me`.
+- Argon2 password hashing; opaque invitation/session tokens are stored as hashes.
+- HttpOnly, SameSite=Lax session cookie; configurable Secure setting; Origin check on cookie-authenticated mutations.
+- Optional bootstrap invitation endpoint is unavailable when no server-side bootstrap secret is configured.
+- React AuthGate provides login, invitation registration, existing-session check, and logout. Requests include cookies; auth tokens are not written to localStorage.
+- CI provisions PostgreSQL 16 and runs backend checks; workflow concurrency cancels superseded runs.
+- Auth integration tests cover registration/login/logout, invitation email binding/expiry, duplicate registration, and invalid credentials.
+- `docs/PROGRESS.md` is the durable handoff file.
+
+### Not yet verified / remaining risks
+- CI success is not a security audit and does not establish production readiness.
+- No production deployment has been verified. Rate limiting, HTTPS enforcement, secure production cookie configuration, managed secrets, invitation operations, and account recovery still need work.
+- Ownership isolation for future user-owned task/student/project CRUD is not implemented yet; do not expose private-data CRUD until every endpoint enforces and tests ownership.
+- The dashboard tasks and timer remain demo/in-memory state, not durable PostgreSQL features.
+- Auth tests use a disposable CI PostgreSQL database; ensure tests are never pointed at real user data.
+- OAuth integrations, calendar sync, persistent task/time CRUD, tutoring workflows, and analytics remain incomplete.
+- Full personal-finance module and bank statement import remain post-MVP.
+
+### Single next action
+Review PR #3 and its auth integration tests, then run a focused security/configuration review (especially Origin/CSRF behavior, production cookie defaults, invitation bootstrap, and session expiry) before starting task CRUD. Keep the PR in draft and do not merge without user approval.
