@@ -3,7 +3,7 @@ on:
   push:
     branches: [main, "feat/**", "fix/**"]
   pull_request:
-    branches: [main]
+    branches: [main, "feat/**"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,6 +11,24 @@ jobs:
   backend:
     name: Backend checks
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: personal_os
+          POSTGRES_USER: personal_os
+          POSTGRES_PASSWORD: personal_os_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U personal_os -d personal_os"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://personal_os:personal_os_test@localhost:5432/personal_os
+      FRONTEND_ORIGIN: http://localhost:5173
+      COOKIE_SECURE: "false"
     defaults:
       run:
         working-directory: backend
@@ -22,6 +40,7 @@ jobs:
           cache: pip
           cache-dependency-path: backend/pyproject.toml
       - run: pip install -e ".[dev]"
+      - run: alembic upgrade head
       - run: ruff check .
       - run: mypy app
       - run: pytest
