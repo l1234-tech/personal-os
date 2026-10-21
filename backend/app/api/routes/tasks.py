@@ -82,6 +82,7 @@ def create_task(
     user: User = Depends(get_current_user),  # noqa: B008
 ) -> Task:
     data = payload.model_dump()
+    validate_project_link(db, user.id, data["project_id"])
     data["title"] = data["title"].strip()
     if not data["title"]:
         raise HTTPException(status_code=422, detail="Task title cannot be blank")
@@ -190,6 +191,8 @@ def update_time_entry(
         if key in changes
     ):
         raise HTTPException(status_code=422, detail="Timestamps cannot be null")
+    if "project_id" in changes:
+        validate_project_link(db, user.id, changes["project_id"])
     if "task_id" in changes:
         validate_task_link(db, user.id, changes["task_id"])
     if "student_id" in changes:
