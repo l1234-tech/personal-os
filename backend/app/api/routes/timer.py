@@ -163,6 +163,7 @@ def stop_timer(
         user_id=user.id,
         task_id=session.task_id,
         student_id=session.student_id,
+        project_id=session.project_id,
         category=session.category,
         notes=None,
         started_at=session.started_at,
