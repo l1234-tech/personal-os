@@ -124,7 +124,7 @@ def login(
 def logout(
     request: Request,
     response: Response,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> Response:
     enforce_same_origin(request)
     token = request.cookies.get(SESSION_COOKIE)
@@ -154,7 +154,7 @@ def create_invitation(
     payload: CreateInvitationRequest,
     request: Request,
     response: Response,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> InvitationResponse:
     if not settings.bootstrap_invitation_secret:
         raise HTTPException(status_code=404, detail="Not found")
