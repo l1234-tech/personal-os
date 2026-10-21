@@ -107,7 +107,7 @@ def login(
     payload: LoginRequest,
     request: Request,
     response: Response,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> User:
     enforce_same_origin(request)
     email = normalize_email(payload.email)
