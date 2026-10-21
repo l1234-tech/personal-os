@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { ArrowRight, Command, LoaderCircle, LockKeyhole } from 'lucide-react'
 import App from './App'
 
@@ -47,7 +48,7 @@ export default function AuthGate() {
     setBusy(true)
     try {
       const path = mode === 'login' ? '/auth/login' : '/auth/register'
-      const payload = mode === 'login'
+      const payload: Record<string, string> = mode === 'login'
         ? { email, password }
         : { email, password, invitation_token: invitation.trim() }
       const current = await request<User>(path, payload)
