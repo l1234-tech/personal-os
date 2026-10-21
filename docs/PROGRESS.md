@@ -29,7 +29,8 @@ This file is the durable resume point for future work sessions. Read it before c
 - Session cookie is HttpOnly, SameSite=Lax, configurable Secure; cookie-authenticated mutations check Origin.
 - Docker image contains migration files and applies `alembic upgrade head` before starting API in local Compose.
 - Tests cover password/token hashing and basic auth guards.
-- Latest confirmed green CI on auth branch head `28dc4364a9d61e478c5b6bddef3e054119da60af`: https://github.com/l1234-tech/personal-os/actions/runs/39685655087.
+- React `AuthGate` now checks `/auth/me`, provides login and invite-only registration forms, sends cookies with `credentials: include`, and supports logout. Tokens/passwords are not written to localStorage.
+- Auth UI and CSS have just been added; CI is running for the newest commits. Last confirmed green backend+frontend CI before the UI change: https://github.com/l1234-tech/personal-os/actions/runs/39686541508.
 
 ## Important constraints
 - Do not call the project production-ready solely because CI passes.
@@ -41,13 +42,12 @@ This file is the durable resume point for future work sessions. Read it before c
 - Full personal finance and bank statement imports remain post-MVP.
 
 ## Next steps
-1. Review PR #3, ensure it targets `feat/foundation`, keep it draft until reviewed.
+1. Confirm CI for the latest AuthGate commits; fix lint/type/test failures before proceeding.
 2. Add integration tests: valid invitation registration, wrong email, expired/used invitation, login, logout/revoked session, duplicate registration. Use isolated test DB/fixtures.
 3. Add rate limiting and strengthen CSRF/origin policy. Require Secure cookies and robust secrets in production.
-4. Add React login/register UI and API client with cookie credentials; never put auth tokens in localStorage.
-5. Implement user-owned task CRUD + PostgreSQL persistence and ownership-isolation tests in `feat/tasks-time-tracking`.
-6. Continue Calendar/planning, tutoring, study/projects and integrations/analytics in separate PRs with tests/CI.
-7. Do not merge to main without user review/approval.
+4. Implement user-owned task CRUD + PostgreSQL persistence and ownership-isolation tests in `feat/tasks-time-tracking`.
+5. Continue Calendar/planning, tutoring, study/projects and integrations/analytics in separate PRs with tests/CI.
+6. Do not merge to main without user review/approval.
 
 ## Stop/resume workflow
 - Read this file before continuing.
