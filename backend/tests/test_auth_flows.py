@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.db import Base, get_db
 from app.main import app
-from app.models import Invitation, User
+from app.models import Invitation
 from app.security import generate_opaque_token, hash_password, hash_token
 
 
@@ -105,7 +105,9 @@ def test_invitation_is_bound_to_email_and_single_use(client: TestClient) -> None
 
 def test_expired_invitation_is_rejected(client: TestClient) -> None:
     token = generate_opaque_token()
-    with next(iter(app.dependency_overrides.values()))() as db:
+    db_generator = app.dependency_overrides[get_db]()
+    db = next(db_generator)
+    try:
         db.add(
             Invitation(
                 email="expired@example.com",
@@ -114,6 +116,8 @@ def test_expired_invitation_is_rejected(client: TestClient) -> None:
             )
         )
         db.commit()
+    finally:
+        db_generator.close()
 
     response = client.post(
         "/api/v1/auth/register",
