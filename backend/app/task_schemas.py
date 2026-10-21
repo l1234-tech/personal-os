@@ -15,6 +15,7 @@ def require_aware(value: datetime) -> datetime:
 
 
 class TaskCreate(BaseModel):
+    project_id: UUID | None = None
     title: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=10000)
     status: TaskStatus = "todo"
@@ -30,6 +31,7 @@ class TaskCreate(BaseModel):
 
 
 class TaskUpdate(BaseModel):
+    project_id: UUID | None = None
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=10000)
     status: TaskStatus | None = None
@@ -46,6 +48,7 @@ class TaskUpdate(BaseModel):
 
 class TaskRead(BaseModel):
     id: UUID
+    project_id: UUID | None
     title: str
     description: str | None
     status: TaskStatus
