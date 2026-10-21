@@ -145,6 +145,7 @@ def upgrade() -> None:
         sa.Column("task_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("calendar_event_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("title", sa.String(length=500), nullable=False),
+        sa.Column("target_calendar_id", sa.String(length=1024), nullable=True),
         sa.Column("start_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("end_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("status", sa.String(length=24), nullable=False, server_default="draft"),
