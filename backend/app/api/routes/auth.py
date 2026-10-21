@@ -63,7 +63,7 @@ def register(
     payload: RegisterRequest,
     request: Request,
     response: Response,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> User:
     enforce_same_origin(request)
     email = normalize_email(payload.email)
@@ -145,7 +145,7 @@ def logout(
 
 
 @router.get("/me", response_model=UserResponse)
-def me(user: User = Depends(get_current_user)) -> User:
+def me(user: User = Depends(get_current_user)) -> User:  # noqa: B008
     return user
 
 
