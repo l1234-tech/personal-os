@@ -43,7 +43,11 @@ def validate_task_link(db: Session, user_id: UUID, task_id: UUID | None) -> None
 
 @router.get("/tasks", response_model=list[TaskRead])
 def list_tasks(
-    task_status: str | None = Query(default=None, alias="status", pattern="^(todo|in_progress|done|cancelled)$"),
+    task_status: str | None = Query(
+        default=None,
+        alias="status",
+        pattern="^(todo|in_progress|done|cancelled)$",
+    ),
     limit: int = Query(default=100, ge=1, le=200),
     db: Session = Depends(get_db),  # noqa: B008
     user: User = Depends(get_current_user),  # noqa: B008
@@ -131,7 +135,10 @@ def create_time_entry(
     validate_task_link(db, user.id, payload.task_id)
     duration = int((payload.ended_at - payload.started_at).total_seconds())
     if duration <= 0 or duration > 31_536_000:
-        raise HTTPException(status_code=422, detail="Time entry duration must be between 1 second and 365 days")
+        raise HTTPException(
+            status_code=422,
+            detail="Time entry duration must be between 1 second and 365 days",
+        )
     entry = TimeEntry(
         user_id=user.id,
         task_id=payload.task_id,
@@ -157,7 +164,11 @@ def update_time_entry(
 ) -> TimeEntry:
     entry = get_owned_entry(db, user.id, entry_id)
     changes = payload.model_dump(exclude_unset=True)
-    if any(changes.get(key, "not_set") is None for key in ("started_at", "ended_at") if key in changes):
+    if any(
+        changes.get(key, "not_set") is None
+        for key in ("started_at", "ended_at")
+        if key in changes
+    ):
         raise HTTPException(status_code=422, detail="Timestamps cannot be null")
     if "task_id" in changes:
         validate_task_link(db, user.id, changes["task_id"])
