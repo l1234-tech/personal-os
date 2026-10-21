@@ -47,9 +47,6 @@ services:
     ports: ["5173:80"]
     depends_on: [api]
     restart: unless-stopped
-volumes:
-  postgres_data:
-
   worker:
     build:
       context: ./backend
@@ -63,7 +60,12 @@ volumes:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI:-http://localhost:8000/api/v1/integrations/github/callback}
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+volumes:
+  postgres_data:
