@@ -1,6 +1,6 @@
+import os
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
-import os
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.db import Base, get_db
 from app.main import app
 from app.models import Invitation
-from app.security import generate_opaque_token, hash_password, hash_token
+from app.security import generate_opaque_token, hash_token
 
 
 @pytest.fixture()
@@ -22,7 +22,9 @@ def client() -> Generator[TestClient, None, None]:
     engine = create_engine(database_url, pool_pre_ping=True)
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
-    test_session = sessionmaker(bind=engine, class_=Session, autoflush=False, expire_on_commit=False)
+    test_session = sessionmaker(
+        bind=engine, class_=Session, autoflush=False, expire_on_commit=False
+    )
 
     def override_get_db() -> Generator[Session, None, None]:
         db = test_session()
