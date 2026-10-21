@@ -143,6 +143,7 @@ def create_draft_block(
         user_id=user.id,
         task_id=task.id,
         title=task.title,
+        target_calendar_id=payload.calendar_id,
         start_at=payload.start_at.astimezone(UTC),
         end_at=payload.end_at.astimezone(UTC),
         status="draft",
@@ -215,7 +216,18 @@ def publish_confirmed_block(
     ).all()
     if not selections:
         raise HTTPException(status_code=409, detail="Select a calendar before publishing blocks")
-    selection = selections[0]
+    if block.target_calendar_id:
+        selection = next(
+            (item for item in selections if item.calendar_id == block.target_calendar_id),
+            None,
+        )
+        if selection is None:
+            raise HTTPException(
+                status_code=409,
+                detail="The target calendar is not selected for synchronization",
+            )
+    else:
+        selection = selections[0]
     token = get_access_token(db, integration)
     event_id = block.id.hex  # Google-compatible stable ID makes retries idempotent.
     event_url = f"{calendar_events_url(selection.calendar_id)}/{quote(event_id, safe='')}"
