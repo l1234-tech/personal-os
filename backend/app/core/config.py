@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     database_url: str = "postgresql+psycopg://personal_os:change_me_locally@localhost:5432/personal_os"
     frontend_origin: str = "http://localhost:5173"
+    cookie_secure: bool = False
+    bootstrap_invitation_secret: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

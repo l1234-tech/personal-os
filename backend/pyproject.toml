@@ -7,7 +7,7 @@ name = "personal-os-api"
 version = "0.1.0"
 description = "Personal OS API foundation"
 requires-python = ">=3.12"
-dependencies = ["fastapi>=0.115,<1.0", "uvicorn[standard]>=0.30,<1.0", "pydantic-settings>=2.5,<3.0", "sqlalchemy>=2.0,<3.0", "psycopg[binary]>=3.2,<4.0"]
+dependencies = ["fastapi>=0.115,<1.0", "uvicorn[standard]>=0.30,<1.0", "pydantic-settings>=2.5,<3.0", "sqlalchemy>=2.0,<3.0", "psycopg[binary]>=3.2,<4.0", "pwdlib[argon2]>=0.2.1,<1.0", "alembic>=1.14,<2.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.3,<9.0", "httpx>=0.27,<1.0", "ruff>=0.6,<1.0", "mypy>=1.11,<2.0"]
