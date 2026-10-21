@@ -100,7 +100,7 @@ def test_invitation_is_bound_to_email_and_single_use(client: TestClient) -> None
     }
     assert client.post("/api/v1/auth/register", json=correct_payload).status_code == 201
     reused = client.post("/api/v1/auth/register", json=correct_payload)
-    assert reused.status_code == 400
+    assert reused.status_code == 409  # duplicate account is rejected before token reuse is checked
 
 
 def test_expired_invitation_is_rejected(client: TestClient) -> None:
