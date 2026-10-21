@@ -28,9 +28,10 @@ This file is the durable resume point for future work sessions. Read it before c
 - Invitation issuance is disabled unless `BOOTSTRAP_INVITATION_SECRET` is configured; secret comparison uses constant time.
 - Session cookie is HttpOnly, SameSite=Lax, configurable Secure; cookie-authenticated mutations check Origin.
 - Docker image contains migration files and applies `alembic upgrade head` before starting API in local Compose.
-- Tests cover password/token hashing and basic auth guards.
-- React `AuthGate` now checks `/auth/me`, provides login and invite-only registration forms, sends cookies with `credentials: include`, and supports logout. Tokens/passwords are not written to localStorage.
-- Auth UI and CSS have just been added; CI is running for the newest commits. Last confirmed green backend+frontend CI before the UI change: https://github.com/l1234-tech/personal-os/actions/runs/39686541508.
+- Tests cover password/token hashing, auth guards and PostgreSQL-backed registration/login/logout, invitation email binding/expiry, duplicate registration and invalid credentials.
+- CI now starts a PostgreSQL 16 service for backend tests and cancels superseded runs on the same ref.
+- React `AuthGate` checks `/auth/me`, provides login and invite-only registration forms, sends cookies with `credentials: include`, and supports logout. Tokens/passwords are not written to localStorage.
+- Latest commits add integration tests and fix TypeScript/fixture issues found by CI. **CI for the current head is queued/running; do not treat it as green yet.** Latest run: https://github.com/l1234-tech/personal-os/actions/runs/39686866316. Last confirmed green CI before these additions: https://github.com/l1234-tech/personal-os/actions/runs/39686541508.
 
 ## Important constraints
 - Do not call the project production-ready solely because CI passes.
@@ -42,8 +43,8 @@ This file is the durable resume point for future work sessions. Read it before c
 - Full personal finance and bank statement imports remain post-MVP.
 
 ## Next steps
-1. Confirm CI for the latest AuthGate commits; fix lint/type/test failures before proceeding.
-2. Add integration tests: valid invitation registration, wrong email, expired/used invitation, login, logout/revoked session, duplicate registration. Use isolated test DB/fixtures.
+1. Confirm CI for the current auth branch head; fix any remaining Ruff/mypy/pytest/ESLint/TypeScript/build errors.
+2. Review the new auth integration tests and verify they really run against the PostgreSQL service in CI.
 3. Add rate limiting and strengthen CSRF/origin policy. Require Secure cookies and robust secrets in production.
 4. Implement user-owned task CRUD + PostgreSQL persistence and ownership-isolation tests in `feat/tasks-time-tracking`.
 5. Continue Calendar/planning, tutoring, study/projects and integrations/analytics in separate PRs with tests/CI.
