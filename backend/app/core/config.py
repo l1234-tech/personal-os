@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     bootstrap_invitation_secret: str | None = None
     google_client_id: str | None = None
+    github_client_id: str | None = None
+    github_client_secret: str | None = None
+    github_redirect_uri: str | None = None
     google_client_secret: str | None = None
     google_redirect_uri: str | None = None
     token_encryption_key: str | None = None
