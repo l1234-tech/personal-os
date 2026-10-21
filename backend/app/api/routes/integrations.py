@@ -1,6 +1,5 @@
-import hmac
-import secrets
 from datetime import UTC, date, datetime, time, timedelta
+from urllib.parse import quote
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -26,8 +25,8 @@ from app.integrations.google_calendar import (
     GOOGLE_CALENDAR_API,
     GOOGLE_TOKEN_URL,
     GOOGLE_USERINFO_URL,
-    decrypt_token,
     encrypt_token,
+    calendar_events_url,
     get_access_token,
     google_get_json,
     require_google_oauth_settings,
@@ -475,7 +474,7 @@ def sync_google_calendars(
             params["singleEvents"] = "true"
             params["orderBy"] = "startTime"
 
-        url = f"{GOOGLE_CALENDAR_API}/calendars/{__import__('urllib.parse', fromlist=['quote']).quote(selection.calendar_id, safe='')}/events"
+        url = calendar_events_url(selection.calendar_id)
         page_token: str | None = None
         next_sync_token: str | None = None
         while True:
