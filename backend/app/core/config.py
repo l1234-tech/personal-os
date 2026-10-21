@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     google_client_secret: str | None = None
     google_redirect_uri: str | None = None
     token_encryption_key: str | None = None
+    telegram_bot_token: str | None = None
+    telegram_bot_username: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
