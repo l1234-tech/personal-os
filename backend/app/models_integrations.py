@@ -160,6 +160,7 @@ class TaskBlock(Base):
         PGUUID(as_uuid=True), ForeignKey("calendar_events.id", ondelete="SET NULL"), nullable=True
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
+    target_calendar_id: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="draft")
