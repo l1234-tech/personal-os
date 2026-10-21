@@ -21,4 +21,8 @@ app.include_router(api_router, prefix=settings.api_v1_prefix)
 
 @app.get("/", include_in_schema=False)
 def root() -> dict[str, str]:
-    return {"name": settings.app_name, "docs": "/docs", "health": f"{settings.api_v1_prefix}/health"}
+    return {
+        "name": settings.app_name,
+        "docs": "/docs",
+        "health": f"{settings.api_v1_prefix}/health",
+    }
