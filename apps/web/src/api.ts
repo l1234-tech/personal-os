@@ -55,6 +55,39 @@ export type TimeEntry = {
   created_at: string
 }
 
+export type Integration = {
+  id: string
+  provider: string
+  external_account_id: string
+  status: string
+  scopes: string[]
+  connected_at: string
+  updated_at: string
+}
+
+export type GoogleCalendar = {
+  id: string
+  summary: string
+  primary: boolean
+  access_role: string
+  selected: boolean
+}
+
+export type CalendarEvent = {
+  id: string
+  calendar_id: string
+  external_event_id: string
+  title: string
+  description: string | null
+  start_at: string
+  end_at: string
+  all_day: boolean
+  status: string
+  html_link: string | null
+  external_updated_at: string | null
+  synced_at: string
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
   if (init.body && !headers.has("Content-Type")) {
@@ -110,4 +143,26 @@ export const api = {
   resumeTimer: () => request<TimerState>("/timer/resume", { method: "POST" }),
   stopTimer: () => request<TimerState>("/timer/stop", { method: "POST" }),
   timeEntries: () => request<TimeEntry[]>("/time-entries?limit=200"),
+  integrations: () => request<Integration[]>("/integrations"),
+  connectGoogleCalendar: () => request<{ authorization_url: string; expires_at: string }>(
+    "/integrations/google/connect",
+    { method: "POST" },
+  ),
+  googleCalendars: () => request<GoogleCalendar[]>("/integrations/google/calendars"),
+  selectGoogleCalendars: (calendarIds: string[]) =>
+    request<GoogleCalendar[]>("/integrations/google/calendars", {
+      method: "PUT",
+      body: JSON.stringify({ calendar_ids: calendarIds }),
+    }),
+  syncGoogleCalendar: () =>
+    request<{ calendars_synced: number; events_seen: number; events_created_or_updated: number; synced_at: string }>(
+      "/integrations/google/sync",
+      { method: "POST" },
+    ),
+  calendarEvents: (startAt: string, endAt: string) =>
+    request<CalendarEvent[]>(
+      `/integrations/calendar/events?start_at=${encodeURIComponent(startAt)}&end_at=${encodeURIComponent(endAt)}&limit=100`,
+    ),
+  disconnectGoogleCalendar: () =>
+    request<void>("/integrations/google", { method: "DELETE" }),
 }
