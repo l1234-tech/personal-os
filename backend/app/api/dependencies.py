@@ -11,7 +11,7 @@ from app.security import hash_token
 SESSION_COOKIE = "personal_os_session"
 
 
-def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:  # noqa: B008
     token = request.cookies.get(SESSION_COOKIE)
     if not token:
         raise HTTPException(
