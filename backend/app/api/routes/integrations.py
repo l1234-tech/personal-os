@@ -27,6 +27,7 @@ from app.integrations.google_calendar import (
     GOOGLE_USERINFO_URL,
     encrypt_token,
     calendar_events_url,
+    decrypt_token,
     get_access_token,
     google_get_json,
     require_google_oauth_settings,
@@ -614,3 +615,51 @@ def list_calendar_events(
             .limit(limit)
         ).all()
     )
+
+
+
+@router.delete("/google", status_code=status.HTTP_204_NO_CONTENT)
+def disconnect_google_calendar(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),  # noqa: B008
+    user: User = Depends(get_current_user),  # noqa: B008
+) -> Response:
+    integration = db.scalar(
+        select(Integration).where(
+            Integration.user_id == user.id,
+            Integration.provider == GOOGLE_PROVIDER,
+        )
+    )
+    if integration is None:
+        response.status_code = status.HTTP_204_NO_CONTENT
+        return response
+
+    credential = db.get(IntegrationCredential, integration.id)
+    token_to_revoke: str | None = None
+    if credential is not None:
+        try:
+            token_to_revoke = (
+                decrypt_token(credential.encrypted_refresh_token)
+                if credential.encrypted_refresh_token
+                else decrypt_token(credential.encrypted_access_token)
+            )
+        except HTTPException:
+            token_to_revoke = None
+
+    # Local credentials must be deleted even when Google is unavailable.
+    if token_to_revoke:
+        try:
+            with httpx.Client(timeout=5.0) as client:
+                client.post(
+                    "https://oauth2.googleapis.com/revoke",
+                    params={"token": token_to_revoke},
+                )
+        except httpx.HTTPError:
+            pass
+
+    db.delete(integration)
+    db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
