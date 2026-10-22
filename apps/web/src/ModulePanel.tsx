@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { ArrowRight, BookOpen, CheckCircle2, Clock3, Plus, UsersRound } from 'lucide-react'
 import CalendarPanel from './CalendarPanel'
-import { api, type DailyAnalytics, type Project, type Student, type Subject, type TimeEntry, type WeeklyAnalytics } from './api'
+import { api, type DailyAnalytics, type GitHubRepository, type Project, type Student, type Subject, type TelegramStatus, type TimeEntry, type WeeklyAnalytics } from './api'
 
 type Props = { page: string }
 
@@ -12,6 +12,12 @@ export default function ModulePanel({ page }: Props) {
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [daily, setDaily] = useState<DailyAnalytics | null>(null)
   const [weekly, setWeekly] = useState<WeeklyAnalytics | null>(null)
+  const [githubRepos, setGithubRepos] = useState<GitHubRepository[]>([])
+  const [githubConnected, setGithubConnected] = useState(false)
+  const [telegramStatus, setTelegramStatus] = useState<TelegramStatus | null>(null)
+  const [telegramLink, setTelegramLink] = useState('')
+  const [linkProjectId, setLinkProjectId] = useState('')
+  const [linkingRepoId, setLinkingRepoId] = useState<number | null>(null)
   const [name, setName] = useState('')
   const [subject, setSubject] = useState('')
   const [semester, setSemester] = useState('2026 осень')
@@ -26,7 +32,17 @@ export default function ModulePanel({ page }: Props) {
     try {
       if (page === 'Репетиторство') setStudents(await api.students())
       else if (page === 'Учёба') setSubjects(await api.subjects())
-      else if (page === 'ML и проекты') setProjects(await api.projects())
+      else if (page === 'ML и проекты') {
+        setProjects(await api.projects())
+        try {
+          setGithubRepos(await api.githubRepositories())
+          setGithubConnected(true)
+        } catch {
+          setGithubRepos([])
+          setGithubConnected(false)
+        }
+        try { setTelegramStatus(await api.telegramStatus()) } catch { setTelegramStatus(null) }
+      }
       else if (page === 'Фокус и время') setEntries(await api.timeEntries())
       else if (page === 'Аналитика') {
         const [dailyReport, weeklyReport] = await Promise.all([api.dailyAnalytics(), api.weeklyAnalytics()])
@@ -66,6 +82,48 @@ export default function ModulePanel({ page }: Props) {
     }
   }
 
+  async function connectGitHub() {
+    setBusy(true)
+    setError('')
+    try {
+      const result = await api.connectGitHub()
+      window.location.assign(result.authorization_url)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Не удалось подключить GitHub')
+      setBusy(false)
+    }
+  }
+
+  async function linkRepository(repository: GitHubRepository) {
+    if (!linkProjectId) {
+      setError('Сначала выбери проект, к которому привязать репозиторий')
+      return
+    }
+    setLinkingRepoId(repository.id)
+    setError('')
+    try {
+      await api.linkGitHubRepository(linkProjectId, { repository_id: repository.id, full_name: repository.full_name })
+      setGithubRepos(await api.githubRepositories())
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Не удалось связать репозиторий с проектом')
+    } finally {
+      setLinkingRepoId(null)
+    }
+  }
+
+  async function createTelegramLink() {
+    setBusy(true)
+    setError('')
+    try {
+      const result = await api.createTelegramLink()
+      setTelegramLink(result.link_url)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Не удалось создать ссылку Telegram')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const trackedSeconds = entries.reduce((total, entry) => total + entry.duration_seconds, 0)
   const trackedLabel = `${Math.floor(trackedSeconds / 3600)} ч ${Math.floor((trackedSeconds % 3600) / 60)} мин`
 
@@ -93,6 +151,16 @@ export default function ModulePanel({ page }: Props) {
     {page === 'ML и проекты' && <>
       <article className="panel module-panel"><div className="panel-title"><div><h3>Новый проект</h3><p>ML/DS, разработка, учебный или личный проект</p></div></div><form className="module-form" onSubmit={submit}><input required value={name} onChange={e => setName(e.target.value)} placeholder="Название проекта"/><select value={projectType} onChange={e => setProjectType(e.target.value)}><option value="ml">ML / Data Science</option><option value="software">Разработка ПО</option><option value="study">Учебный</option><option value="personal">Личный</option><option value="other">Другое</option></select><button className="primary" type="submit" disabled={busy}><Plus size={15}/> Создать</button></form></article>
       <article className="panel module-panel"><div className="panel-title"><div><h3>Проекты</h3><p>Стадии, milestones и репозитории связываются с проектом</p></div></div>{projects.length ? <div className="module-list">{projects.map(item => <div className="module-row" key={item.id}><div className="module-avatar"><BookOpen size={17}/></div><div><b>{item.name}</b><small>{item.project_type} · {item.status}</small></div><ArrowRight size={16}/></div>)}</div> : <p className="empty">Проектов пока нет.</p>}</article>
+      <article className="panel module-panel"><div className="panel-title"><div><h3>GitHub</h3><p>Read-only OAuth для публичных репозиториев и привязка к проектам</p></div></div>
+        {!githubConnected ? <button className="primary" type="button" onClick={() => void connectGitHub()} disabled={busy}><Plus size={15}/> Подключить GitHub</button> : <>
+          <div className="module-form"><select value={linkProjectId} onChange={event => setLinkProjectId(event.target.value)}><option value="">Выбери проект для привязки</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select><button className="secondary" type="button" onClick={() => void load()} disabled={busy}>Обновить репозитории</button></div>
+          {githubRepos.length ? <div className="module-list">{githubRepos.map(repository => <div className="module-row" key={repository.id}><div className="module-avatar"><BookOpen size={16}/></div><div><b>{repository.full_name}</b><small>{repository.private ? 'Private' : 'Public'} · {repository.default_branch}{repository.linked_project_id ? ' · привязан к проекту' : ''}</small></div><a href={repository.html_url} target="_blank" rel="noreferrer">Открыть</a><button className="quiet" type="button" onClick={() => void linkRepository(repository)} disabled={!linkProjectId || linkingRepoId === repository.id}>{linkingRepoId === repository.id ? '…' : 'Связать'}</button></div>)}</div> : <p className="empty">GitHub подключён, но доступных публичных репозиториев не найдено.</p>}
+        </>}
+      </article>
+      <article className="panel module-panel"><div className="panel-title"><div><h3>Telegram-уведомления</h3><p>{telegramStatus?.linked ? 'Аккаунт связан' : 'Ссылка действует 10 минут и может быть использована один раз'}</p></div></div>
+        {telegramStatus?.linked ? <p className="subtitle">Telegram связан с аккаунтом. Уведомления будут отправляться фоновым worker после настройки токена бота.</p> : <button className="primary" type="button" onClick={() => void createTelegramLink()} disabled={busy}><Plus size={15}/> Создать ссылку для Telegram</button>}
+        {telegramLink && <p className="telegram-link"><a href={telegramLink} target="_blank" rel="noreferrer">{telegramLink}</a></p>}
+      </article>
     </>}
 
     {page === 'Фокус и время' && <article className="panel module-panel"><div className="panel-title"><div><h3>Фактическое время</h3><p>Записи из таймера и ручного ввода</p></div><i className="blue"><Clock3 size={16}/></i></div><div className="stat-number">{trackedLabel}</div>{entries.length ? <div className="module-list">{entries.slice(0, 30).map(entry => <div className="module-row" key={entry.id}><div className="module-avatar"><Clock3 size={16}/></div><div><b>{entry.category}</b><small>{new Date(entry.started_at).toLocaleString('ru-RU')} · {entry.source}</small></div><strong>{Math.round(entry.duration_seconds / 60)} мин</strong></div>)}</div> : <p className="empty">Пока нет сохранённых сессий. Запусти таймер на обзоре дня.</p>}</article>}
