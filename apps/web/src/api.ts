@@ -74,8 +74,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!response.ok) {
     let message = `Ошибка запроса (${response.status})`
     try {
-      const payload = (await response.json()) as { detail?: string }
-      if (payload.detail) message = payload.detail
+      const payload = (await response.json()) as { detail?: unknown }
+      if (typeof payload.detail === "string") {
+        message = payload.detail
+      } else if (Array.isArray(payload.detail)) {
+        const first = payload.detail[0] as { msg?: unknown } | undefined
+        if (typeof first?.msg === "string") message = first.msg
+      }
     } catch {
       // Keep the status-based fallback for non-JSON error responses.
     }
