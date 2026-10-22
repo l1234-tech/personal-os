@@ -52,6 +52,9 @@ export default function App() {
   const [editEnd, setEditEnd] = useState('')
   const [updatingEntry, setUpdatingEntry] = useState(false)
   const [activePage, setActivePage] = useState('Обзор дня')
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try { return window.localStorage.getItem('personal-os-theme') === 'dark' ? 'dark' : 'light' } catch { return 'light' }
+  })
   const [query, setQuery] = useState('')
   const [draft, setDraft] = useState('')
   const [category, setCategory] = useState('personal')
@@ -286,7 +289,7 @@ export default function App() {
   }
   if (!authResolved) return <div className="initial-loading"><span className="loading-mark"><Command size={22} /></span><p>Открываю личное пространство…</p></div>
   if (!user) return <AuthScreen onAuthenticated={setUser} />
-  return <div className="shell">
+  return <div className="shell" data-theme={theme}>
     <aside className="sidebar">
       <a className="brand" href="#home"><span className="brand-mark"><Command size={20}/></span><span><strong>personal<span>OS</span></strong><small>YOUR LIFE, IN SYNC</small></span></a>
       <button className="workspace"><span className="workspace-mark">P</span><span><b>Моё пространство</b><small>Personal workspace</small></span><ChevronDown size={15}/></button>
@@ -337,7 +340,7 @@ export default function App() {
           <div className="area-summary"><article className="panel"><span>Активные</span><strong>{openTasks.length}</strong></article><article className="panel"><span>Высокий приоритет</span><strong>{openTasks.filter((task) => task.priority === 'high' || task.priority === 'urgent').length}</strong></article><article className="panel"><span>С оценкой времени</span><strong>{openTasks.filter((task) => task.estimated_minutes !== null).length}</strong></article></div>
           <article className="panel"><div className="panel-title"><div><h3>Следующие действия</h3><p>Список активных задач, отсортированный по приоритету.</p></div></div><div className="task-list">{[...openTasks].sort((a,b) => ({urgent:0,high:1,medium:2,low:3}[a.priority] - {urgent:0,high:1,medium:2,low:3}[b.priority])).map((task) => <div className="task-row" key={task.id}><div className={'marker ' + categoryColor(task.category)}/><div className="task-copy"><b>{task.title}</b><span>{task.category} · {task.priority === 'urgent' ? 'Срочно' : task.priority === 'high' ? 'Высокий приоритет' : task.priority === 'low' ? 'Низкий приоритет' : 'Обычный приоритет'}</span></div><span className="duration">{formatDuration(task.estimated_minutes)}</span><button className="quiet" onClick={() => void toggleTask(task)} disabled={!online}>Готово</button></div>)}{!openTasks.length && <div className="empty"><Check size={20}/><b>Активных задач нет</b><span>Добавь новую задачу, когда появится следующий шаг.</span></div>}</div></article>
           <article className="panel area-tip"><CalendarDays size={18}/><div><b>Календарь — следующий этап</b><p>Сейчас здесь отображаются реальные задачи и их приоритеты. Внешние события пока не подключены, поэтому система не придумывает расписание. Следующим этапом добавим даты выполнения и календарные блоки.</p></div></article>
-        </section> : activePage === 'Настройки' ? <section className="panel module-placeholder"><div className="module-icon"><Settings2 size={20}/></div><p className="date-label">АККАУНТ</p><h1>Настройки пространства</h1><p>Ты вошёл как <b>{user.email}</b>. Сейчас доступна базовая сессия; настройки интеграций и уведомлений будут подключены отдельными этапами.</p><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить данные</button></section> : activePage === 'Фокус и время' ? <section className="time-page">
+        </section> : activePage === 'Настройки' ? <section className="panel module-placeholder"><div className="module-icon"><Settings2 size={20}/></div><p className="date-label">АККАУНТ</p><h1>Настройки пространства</h1><p>Ты вошёл как <b>{user.email}</b>. Здесь можно настроить внешний вид и обновить данные рабочего пространства.</p><div className="settings-section"><h3>Оформление</h3><p>Выбери комфортную тему. Настройка сохраняется в этом браузере.</p><div className="theme-switch" role="group" aria-label="Тема оформления"><button type="button" className={theme === 'light' ? 'selected' : ''} aria-pressed={theme === 'light'} onClick={() => setTheme('light')}>☼ Светлая</button><button type="button" className={theme === 'dark' ? 'selected' : ''} aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}>☾ Тёмная</button></div></div><div className="settings-section"><h3>Подключения</h3><p>Google Calendar появится здесь после настройки OAuth в Google Cloud. Секреты хранятся только на backend и в локальном .env.</p><div className="calendar-status"><i/> Google Calendar · ожидает настройки OAuth</div></div><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить данные</button></section> : activePage === 'Фокус и время' ? <section className="time-page">
           <div className="welcome"><div><p className="date">УЧЁТ ФАКТИЧЕСКОЙ РАБОТЫ</p><h1>Фокус и время</h1><p className="subtitle">Записывай время по факту и сравнивай его с оценками задач.</p></div><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить</button></div>
           <div className="time-summary">
             <article className="panel"><span>Записей времени</span><strong>{timeEntries.length}</strong></article>
