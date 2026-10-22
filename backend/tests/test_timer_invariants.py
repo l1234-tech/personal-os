@@ -13,7 +13,7 @@ from app.api.routes.timer import to_timer_read
 def test_running_timer_includes_time_since_last_resume() -> None:
     now = datetime(2026, 10, 22, 12, 5, tzinfo=UTC)
     session = SimpleNamespace(
-        id="timer-id",
+        id="12345678-1234-5678-1234-567812345678",
         task_id=None,
         category="study",
         started_at=now - timedelta(minutes=10),
@@ -32,7 +32,7 @@ def test_running_timer_includes_time_since_last_resume() -> None:
 def test_paused_timer_does_not_accumulate_wall_clock_time() -> None:
     now = datetime(2026, 10, 22, 12, 5, tzinfo=UTC)
     session = SimpleNamespace(
-        id="timer-id",
+        id="12345678-1234-5678-1234-567812345678",
         task_id=None,
         category="study",
         started_at=now - timedelta(minutes=10),
@@ -51,7 +51,7 @@ def test_paused_timer_does_not_accumulate_wall_clock_time() -> None:
 def test_running_timer_clamps_negative_clock_delta() -> None:
     now = datetime(2026, 10, 22, 12, 5, tzinfo=UTC)
     session = SimpleNamespace(
-        id="timer-id",
+        id="12345678-1234-5678-1234-567812345678",
         task_id=None,
         category="study",
         started_at=now,
