@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, Bell, BookOpen, CalendarDays, Check, ChevronDown, CircleHelp, Clock3, Command, Compass, GraduationCap, LayoutDashboard, ListTodo, Plus, Search, Settings2, Sparkles, Timer, UsersRound, Wallet, Zap, LogOut } from 'lucide-react'
 import AuthScreen from './AuthScreen'
+import ModulePanel from './ModulePanel'
 import { api, type ApiTask, type TimerState, type User } from './api'
 
 type Task = { id: string; title: string; area: string; time: string; done: boolean; color: string; status: ApiTask['status']; category: string }
@@ -142,6 +143,7 @@ export default function App() {
       <header className="topbar"><div className="crumb"><span>Рабочее пространство</span><ArrowRight size={13}/><b>{activePage}</b></div><div className="top-actions"><label className="search"><Search size={15}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по системе..."/><kbd>⌘ K</kbd></label><button className="icon-button" aria-label="Уведомления"><Bell size={18}/><i/></button><div className="avatar">AS</div></div></header>
       <div className="content">
         {serverError && <div className="auth-error" role="alert">{serverError}</div>}
+        {activePage === 'Обзор дня' ? <>
         <section className="welcome"><div><p className="date">{dateLabel}</p><h1>С возвращением, {user.email.split('@')[0]} <span>✳</span></h1><p className="subtitle">Планы становятся результатами. Давай соберём этот день.</p></div><button className="primary" onClick={() => setComposer(true)}><Plus size={17}/> Новая задача</button></section>
         <section className="hero-grid">
           <article className="focus-card"><div className="orb orb-a"/><div className="orb orb-b"/><div className="card-top"><span className="pill"><Sparkles size={13}/> ФОКУС ДНЯ</span><span className="draft-label">План · черновик</span></div><div className="focus-copy"><p>ТВОЯ ГЛАВНАЯ ЦЕЛЬ</p><h2>Сделать важное.<br/>Не просто заняться делами.</h2><span>Выбери одну задачу, которая сдвинет тебя вперёд — в учёбе, ML или проектах.</span></div><div className="focus-bottom"><div><small>Выполнение задач</small><div className="progress"><span style={{width: `${tasks.length ? done / tasks.length * 100 : 0}%`}}/></div></div><b>{done}/{tasks.length}</b><button className="round-arrow" aria-label="К задачам" onClick={() => setActivePage('Задачи')}><ArrowRight size={16}/></button></div></article>
