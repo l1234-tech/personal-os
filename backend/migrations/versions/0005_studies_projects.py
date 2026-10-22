@@ -225,6 +225,7 @@ def upgrade() -> None:
     op.create_index("ix_task_results_task_id", "task_results", ["task_id"])
     op.create_index("ix_task_results_project_id", "task_results", ["project_id"])
 
+    op.add_column("tasks", sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True))
     for table in ("tasks", "time_entries", "timer_sessions"):
         op.add_column(table, sa.Column("project_id", postgresql.UUID(as_uuid=True), nullable=True))
         op.create_foreign_key(
@@ -243,6 +244,7 @@ def downgrade() -> None:
         op.drop_index(f"ix_{table}_project_id", table_name=table)
         op.drop_constraint(f"fk_{table}_project_id_projects", table, type_="foreignkey")
         op.drop_column(table, "project_id")
+    op.drop_column("tasks", "completed_at")
 
     for table, indexes in [
         ("task_results", ["ix_task_results_project_id", "ix_task_results_task_id", "ix_task_results_user_id"]),
