@@ -147,6 +147,7 @@ def upgrade() -> None:
         sa.Column("due_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("status", sa.String(20), nullable=False, server_default="todo"),
         sa.Column("result", sa.Text(), nullable=True),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         _created(),
         sa.CheckConstraint(
             "status IN ('todo', 'in_progress', 'completed', 'cancelled')",
