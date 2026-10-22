@@ -14,7 +14,8 @@
 ## Stage 2 — Tasks and time (feat/tasks-time-tracking)
 - [x] CRUD задач/категорий/сроков (базовый API и клиентские операции создания/изменения статуса).
 - [x] Таймер с DB-инвариантом одной активной сессии на пользователя (start/pause/resume/stop).
-- [ ] Manual entries, корректировки, plan-vs-actual.
+- [x] Manual time entries: создание записей, история и суммарное фактическое время.
+- [ ] Корректировки существующих записей и plan-vs-actual.
 - [x] Dashboard подключён к API: реальные задачи, состояние таймера, фильтрация, ошибки и сетевой индикатор.
 - [ ] Offline read-only cache и last-synced marker (отдельная доработка).
 

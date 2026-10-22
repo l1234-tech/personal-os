@@ -115,4 +115,8 @@ export const api = {
   resumeTimer: () => request<TimerState>("/timer/resume", { method: "POST" }),
   stopTimer: () => request<TimerState>("/timer/stop", { method: "POST" }),
   timeEntries: () => request<TimeEntry[]>("/time-entries?limit=200"),
+  createTimeEntry: (payload: { task_id?: string; category: string; notes?: string; started_at: string; ended_at: string; source?: "manual" | "calendar_adjustment" }) =>
+    request<TimeEntry>("/time-entries", { method: "POST", body: JSON.stringify(payload) }),
+  updateTimeEntry: (id: string, payload: Partial<Pick<TimeEntry, "task_id" | "category" | "notes" | "started_at" | "ended_at" | "duration_seconds">>) =>
+    request<TimeEntry>(`/time-entries/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(payload) }),
 }
