@@ -56,7 +56,12 @@ def time_totals(
     for entry in entries:
         overlap_start = max(entry.started_at, start)
         overlap_end = min(entry.ended_at, end)
-        seconds = max(0, int((overlap_end - overlap_start).total_seconds()))
+        overlap_seconds = max(0, int((overlap_end - overlap_start).total_seconds()))
+        wall_seconds = max(1, int((entry.ended_at - entry.started_at).total_seconds()))
+        if overlap_start == entry.started_at and overlap_end == entry.ended_at:
+            seconds = entry.duration_seconds
+        else:
+            seconds = round(entry.duration_seconds * overlap_seconds / wall_seconds)
         total += seconds
         categories[entry.category] += seconds
     return total, [
