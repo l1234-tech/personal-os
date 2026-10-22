@@ -14,7 +14,6 @@ from app.models_academic import (
     AcademicItem,
     Project,
     ProjectMilestone,
-    ProjectRepository,
     ProjectStage,
     ResourceLink,
     StudyTopic,
