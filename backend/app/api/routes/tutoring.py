@@ -194,6 +194,14 @@ def update_lesson(
             raise HTTPException(status_code=422, detail="Lesson currency must match student currency")
         changes["currency_code"] = student.currency_code
     old_status = lesson.status
+    if changes.get("status") == "completed" and lesson.status != "completed":
+        if changes.get("actual_start") is None and lesson.actual_start is None:
+            changes["actual_start"] = lesson.scheduled_start
+        if changes.get("actual_end") is None and lesson.actual_end is None:
+            changes["actual_end"] = datetime.now(UTC)
+    if changes.get("status") is not None and changes.get("status") != "completed":
+        if "actual_end" not in changes:
+            changes["actual_end"] = None
     if "cancellation_reason" in changes and changes["cancellation_reason"] is not None:
         changes["cancellation_reason"] = changes["cancellation_reason"].strip() or None
     for key, value in changes.items():
