@@ -17,6 +17,7 @@ function formatDuration(minutes: number | null) {
   if (!minutes) return 'Без оценки'
   return minutes < 60 ? `${minutes} мин` : `${Math.floor(minutes / 60)} ч${minutes % 60 ? ` ${minutes % 60} мин` : ''}`
 }
+function localDateTimeValue(date = new Date()) { const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000); return local.toISOString().slice(0, 16) }
 function formatClock(seconds: number) {
   return [Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60), seconds % 60].map((part) => String(part).padStart(2, '0')).join(':')
 }
@@ -34,6 +35,12 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [authResolved, setAuthResolved] = useState(false)
   const [tasks, setTasks] = useState<ApiTask[]>([])
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
+  const [manualCategory, setManualCategory] = useState('study')
+  const [manualNotes, setManualNotes] = useState('')
+  const [manualStart, setManualStart] = useState(() => localDateTimeValue(new Date(Date.now() - 60 * 60 * 1000)))
+  const [manualEnd, setManualEnd] = useState(() => localDateTimeValue())
+  const [savingEntry, setSavingEntry] = useState(false)
   const [activePage, setActivePage] = useState('Обзор дня')
   const [query, setQuery] = useState('')
   const [draft, setDraft] = useState('')
@@ -120,6 +127,30 @@ export default function App() {
     } catch (error) { setNotice(apiMessage(error)) }
     finally { setSavingTask(false) }
   }
+  async function addManualEntry(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const startedAt = new Date(manualStart)
+    const endedAt = new Date(manualEnd)
+    if (!manualStart || !manualEnd || Number.isNaN(startedAt.getTime()) || Number.isNaN(endedAt.getTime()) || endedAt <= startedAt) {
+      setNotice('Время окончания должно быть позже времени начала.')
+      return
+    }
+    setSavingEntry(true)
+    setNotice('')
+    try {
+      const entry = await api.createTimeEntry({
+        category: manualCategory.trim(),
+        notes: manualNotes.trim() || undefined,
+        started_at: startedAt.toISOString(),
+        ended_at: endedAt.toISOString(),
+        source: 'manual',
+      })
+      setTimeEntries((current) => [entry, ...current])
+      setManualNotes('')
+      setNotice('Запись времени сохранена.')
+    } catch (error) { setNotice(apiMessage(error)) }
+    finally { setSavingEntry(false) }
+  }
   async function toggleTask(task: ApiTask) {
     setNotice('')
     try {
@@ -136,7 +167,7 @@ export default function App() {
       else if (action === 'resume') next = await api.resumeTimer()
       else next = await api.stopTimer()
       if (action === 'stop') {
-        setTimer(null); setSeconds(0); setTasks(await api.tasks())
+        setTimer(null); setSeconds(0); setTasks(await api.tasks()); setTimeEntries(await api.timeEntries())
         setNotice('Фокус-сессия сохранена в фактическом времени.')
       } else { setTimer(next); setSeconds(next.elapsed_seconds) }
     } catch (error) {
@@ -149,7 +180,7 @@ export default function App() {
   }
   async function logout() {
     try { await api.logout() } catch { /* Session may already be expired. */ }
-    setUser(null); setTasks([]); setTimer(null); setSeconds(0); setNotice('')
+    setUser(null); setTasks([]); setTimeEntries([]); setTimer(null); setSeconds(0); setNotice('')
   }
   if (!authResolved) return <div className="initial-loading"><span className="loading-mark"><Command size={22} /></span><p>Открываю личное пространство…</p></div>
   if (!user) return <AuthScreen onAuthenticated={setUser} />
@@ -166,7 +197,27 @@ export default function App() {
         <section className="welcome"><div><p className="date">{dateLabel}</p><h1>Личное пространство <span>✳</span></h1><p className="subtitle">Планы становятся результатами. Сегодня — только реальные данные.</p></div><button className="primary" onClick={() => setComposer(true)}><Plus size={17}/> Новая задача</button></section>
         {!online && <div className="notice offline-notice"><AlertCircle size={16}/> Нет соединения. Изменения не сохраняются офлайн; дождись сети и повтори действие.</div>}
         {notice && <div className="notice" role="status"><AlertCircle size={16}/><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Закрыть сообщение">×</button></div>}
-        {activePage === 'Настройки' ? <section className="panel module-placeholder"><div className="module-icon"><Settings2 size={20}/></div><p className="date-label">АККАУНТ</p><h1>Настройки пространства</h1><p>Ты вошёл как <b>{user.email}</b>. Сейчас доступна базовая сессия; настройки интеграций и уведомлений будут подключены отдельными этапами.</p><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить данные</button></section> :
+        {activePage === 'Настройки' ? <section className="panel module-placeholder"><div className="module-icon"><Settings2 size={20}/></div><p className="date-label">АККАУНТ</p><h1>Настройки пространства</h1><p>Ты вошёл как <b>{user.email}</b>. Сейчас доступна базовая сессия; настройки интеграций и уведомлений будут подключены отдельными этапами.</p><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить данные</button></section> : activePage === 'Фокус и время' ? <section className="time-page">
+          <div className="welcome"><div><p className="date">УЧЁТ ФАКТИЧЕСКОЙ РАБОТЫ</p><h1>Фокус и время</h1><p className="subtitle">Записывай время по факту и сравнивай его с оценками задач.</p></div><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить</button></div>
+          <div className="time-summary">
+            <article className="panel"><span>Записей времени</span><strong>{timeEntries.length}</strong></article>
+            <article className="panel"><span>Учтено времени</span><strong>{formatClock(timeEntries.reduce((sum, entry) => sum + entry.duration_seconds, 0))}</strong></article>
+            <article className="panel"><span>Таймер сейчас</span><strong>{timer ? formatClock(seconds) : 'Не запущен'}</strong></article>
+          </div>
+          <article className="panel"><div className="panel-title"><div><h3>Добавить прошедшую сессию</h3><p>Например, учёба, разработка или занятие с учеником.</p></div></div>
+            <form className="manual-entry-form" onSubmit={(event) => void addManualEntry(event)}>
+              <label>Направление<input value={manualCategory} onChange={(event) => setManualCategory(event.target.value)} required maxLength={64} placeholder="study, ml, tutoring…" /></label>
+              <div className="manual-dates"><label>Начало<input type="datetime-local" value={manualStart} onChange={(event) => setManualStart(event.target.value)} required /></label><label>Окончание<input type="datetime-local" value={manualEnd} onChange={(event) => setManualEnd(event.target.value)} required /></label></div>
+              <label>Заметка<textarea value={manualNotes} onChange={(event) => setManualNotes(event.target.value)} maxLength={10000} rows={2} placeholder="Что именно делал?" /></label>
+              <button className="primary" type="submit" disabled={savingEntry || !online}>{savingEntry ? 'Сохраняю…' : <><Plus size={15}/> Сохранить время</>}</button>
+            </form>
+          </article>
+          <article className="panel"><div className="panel-title"><div><h3>История времени</h3><p>Последние {timeEntries.length} записей</p></div></div>
+            <div className="entry-list">{timeEntries.map((entry) => <div className="entry-row" key={entry.id}><div className={'marker ' + categoryColor(entry.category)} /><div className="task-copy"><b>{entry.category}</b><span>{new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(entry.started_at))} — {new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date(entry.ended_at))}{entry.notes ? ' · ' + entry.notes : ''}</span></div><span className="duration">{formatClock(entry.duration_seconds)}</span></div>)}
+              {!timeEntries.length && <div className="empty"><Clock3 size={20}/><b>Записей пока нет</b><span>Добавь первую ручную запись или заверши фокус-сессию таймером.</span></div>}
+            </div>
+          </article>
+        </section> :
         <><section className="hero-grid">
           <article className="focus-card"><div className="orb orb-a"/><div className="orb orb-b"/><div className="card-top"><span className="pill"><Sparkles size={13}/> ФОКУС ДНЯ</span><span className="draft-label">{loading ? 'Синхронизация…' : 'Из базы данных'}</span></div><div className="focus-copy"><p>ТВОЯ ГЛАВНАЯ ЦЕЛЬ</p><h2>{openTasks.length ? 'Сделать важное.' : 'Время выбрать следующий шаг.'}<br/>{openTasks.length ? 'Не просто заняться делами.' : 'Не обязательно всё сразу.'}</h2><span>{openTasks.length ? 'Начни с одной задачи, которая сдвинет тебя вперёд. Отмечай факт выполнения — план должен опираться на реальность.' : 'Добавь задачу или проверь свои цели. Отдых тоже часть устойчивого плана.'}</span></div><div className="focus-bottom"><div><small>Завершение задач</small><div className="progress"><span style={{width: `${tasks.length ? done / tasks.length * 100 : 0}%`}}/></div></div><b>{done}/{tasks.length}</b><button className="round-arrow" aria-label="К задачам" onClick={() => setActivePage('Задачи')}><ArrowRight size={16}/></button></div></article>
           <article className="timer-card"><div className="timer-top"><span className="timer-icon"><Timer size={17}/></span><span>Фокус-сессия</span><span className="quiet" title="Состояние хранится на сервере"><Clock3 size={16}/></span></div><p className="timer-label">ТЕКУЩАЯ СЕССИЯ</p><div className="timer-value">{timeLabel}</div><div className="timer-state"><i className={timer?.status === 'running' ? 'live' : ''}/>{timer?.status === 'running' ? 'Таймер запущен' : timer?.status === 'paused' ? 'Таймер на паузе' : 'Готов к фокусировке'}</div><div className="timer-bottom">{!timer ? <button className="primary" disabled={timerBusy || !online} onClick={() => void changeTimerAction('start')}><Zap size={15}/> Начать фокус</button> : timer.status === 'running' ? <button className="secondary" disabled={timerBusy || !online} onClick={() => void changeTimerAction('pause')}>Пауза</button> : <button className="primary" disabled={timerBusy || !online} onClick={() => void changeTimerAction('resume')}><Zap size={15}/> Продолжить</button>}{timer && <button className="stop-button" disabled={timerBusy || !online} onClick={() => void changeTimerAction('stop')}>Завершить</button>}<span>{timer ? 'Запись сохранится в фактическом времени' : 'Без активной сессии'}</span></div></article>
