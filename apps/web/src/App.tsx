@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ArrowRight, Bell, BookOpen, CalendarDays, Check, ChevronDown, Clock3, Command, Compass, GraduationCap, LayoutDashboard, ListTodo, LogOut, Plus, Search, Settings2, Sparkles, Timer, UsersRound, Wallet, Zap, AlertCircle, RefreshCw } from 'lucide-react'
 import AuthScreen from './AuthScreen'
-import { api, ApiError, type ApiTask, type TaskPriority, type TimerState, type User } from './api'
+import { api, ApiError, type ApiTask, type TaskPriority, type TimeEntry, type TimerState, type User } from './api'
 
 const groups = [
   { title: 'РАБОЧЕЕ ПРОСТРАНСТВО', items: [{ label: 'Обзор дня', icon: LayoutDashboard }, { label: 'Планировщик', icon: CalendarDays }, { label: 'Задачи', icon: ListTodo }, { label: 'Фокус и время', icon: Timer }] },
