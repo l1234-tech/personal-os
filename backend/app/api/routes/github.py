@@ -396,9 +396,13 @@ def project_github_activity(
         if isinstance(commits, list) and commits and isinstance(commits[0], dict):
             commit = commits[0]
             latest_sha = commit.get("sha") if isinstance(commit.get("sha"), str) else None
-            inner = commit.get("commit") if isinstance(commit.get("commit"), dict) else {}
+            inner = commit.get("commit")
+            if not isinstance(inner, dict):
+                inner = {}
             latest_message = inner.get("message") if isinstance(inner.get("message"), str) else None
-            author = inner.get("author") if isinstance(inner.get("author"), dict) else {}
+            author = inner.get("author")
+            if not isinstance(author, dict):
+                author = {}
             latest_at = author.get("date") if isinstance(author.get("date"), str) else None
         if not isinstance(pulls, list):
             pulls = []
