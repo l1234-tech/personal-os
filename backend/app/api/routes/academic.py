@@ -245,6 +245,8 @@ def create_academic_item(
         raise HTTPException(status_code=422, detail="Item title cannot be blank")
     if data.get("resource_url"):
         data["resource_url"] = validate_http_url(data["resource_url"])
+    if data.get("status") == "completed":
+        data["completed_at"] = datetime.now(UTC)
     item = AcademicItem(user_id=user.id, subject_id=subject_id, **data)
     db.add(item)
     db.commit()
@@ -442,6 +444,8 @@ def create_project_milestone(
     data["title"] = data["title"].strip()
     if not data["title"]:
         raise HTTPException(status_code=422, detail="Milestone title cannot be blank")
+    if data.get("status") == "completed":
+        data["completed_at"] = datetime.now(UTC)
     milestone = ProjectMilestone(user_id=user.id, project_id=project_id, **data)
     db.add(milestone)
     db.commit()
