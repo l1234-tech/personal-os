@@ -263,9 +263,9 @@ def tick() -> None:
                 BackgroundJob.locked_at < datetime.now(UTC) - timedelta(minutes=10),
             )
         ).all()
-        for job in stale:
-            job.status = "pending"
-            job.locked_at = None
+        for stale_job in stale:
+            stale_job.status = "pending"
+            stale_job.locked_at = None
         if stale:
             db.commit()
 
