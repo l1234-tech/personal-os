@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from uuid import UUID
 
@@ -13,6 +13,7 @@ from app.db import get_db
 from app.models import User
 from app.models_notifications import TelegramAccount, TelegramLinkToken
 from app.models_jobs import BackgroundJob
+from app.security import generate_opaque_token
 
 router = APIRouter(prefix="/telegram", tags=["Telegram"])
 
@@ -92,6 +93,30 @@ def telegram_webhook(
         return {"ok": True}
 
     return {"ok": True}
+
+
+@router.post("/link")
+def create_telegram_link(
+    db: Session = Depends(get_db),  # noqa: B008
+    user: User = Depends(get_current_user),  # noqa: B008
+) -> dict[str, str]:
+    username = (settings.telegram_bot_username or "").strip().removeprefix("@")
+    if not username:
+        raise HTTPException(status_code=503, detail="Telegram bot is not configured")
+    token = generate_opaque_token()
+    now = datetime.now(UTC)
+    db.add(
+        TelegramLinkToken(
+            user_id=user.id,
+            token_hash=sha256(token.encode("utf-8")).hexdigest(),
+            expires_at=now + timedelta(minutes=10),
+        )
+    )
+    db.commit()
+    return {
+        "link_url": f"https://t.me/{username}?start={token}",
+        "expires_at": (now + timedelta(minutes=10)).isoformat(),
+    }
 
 
 @router.get("/status")
