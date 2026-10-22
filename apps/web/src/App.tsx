@@ -10,7 +10,7 @@ function toTask(task: ApiTask): Task {
   return { id: task.id, title: task.title, area: task.category, time: task.estimated_minutes ? `${task.estimated_minutes} мин` : 'Без оценки', done: task.status === 'done', color, status: task.status, category: task.category }
 }
 const groups = [
-  { title: 'РАБОЧЕЕ ПРОСТРАНСТВО', items: [{ label: 'Обзор дня', icon: LayoutDashboard }, { label: 'Планировщик', icon: CalendarDays }, { label: 'Задачи', icon: ListTodo }, { label: 'Фокус и время', icon: Timer }] },
+  { title: 'РАБОЧЕЕ ПРОСТРАНСТВО', items: [{ label: 'Обзор дня', icon: LayoutDashboard }, { label: 'Планировщик', icon: CalendarDays }, { label: 'Задачи', icon: ListTodo }, { label: 'Фокус и время', icon: Timer }, { label: 'Аналитика', icon: Sparkles }] },
   { title: 'НАПРАВЛЕНИЯ', items: [{ label: 'Учёба', icon: GraduationCap }, { label: 'ML и проекты', icon: Compass }, { label: 'Репетиторство', icon: UsersRound }, { label: 'Финансы', icon: Wallet }] },
 ]
 
