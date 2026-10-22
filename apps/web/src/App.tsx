@@ -37,10 +37,18 @@ export default function App() {
   const [tasks, setTasks] = useState<ApiTask[]>([])
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
   const [manualCategory, setManualCategory] = useState('study')
+  const [selectedTaskId, setSelectedTaskId] = useState('')
   const [manualNotes, setManualNotes] = useState('')
   const [manualStart, setManualStart] = useState(() => localDateTimeValue(new Date(Date.now() - 60 * 60 * 1000)))
   const [manualEnd, setManualEnd] = useState(() => localDateTimeValue())
   const [savingEntry, setSavingEntry] = useState(false)
+  const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null)
+  const [editCategory, setEditCategory] = useState('')
+  const [editNotes, setEditNotes] = useState('')
+  const [editTaskId, setEditTaskId] = useState('')
+  const [editStart, setEditStart] = useState('')
+  const [editEnd, setEditEnd] = useState('')
+  const [updatingEntry, setUpdatingEntry] = useState(false)
   const [activePage, setActivePage] = useState('Обзор дня')
   const [query, setQuery] = useState('')
   const [draft, setDraft] = useState('')
@@ -140,6 +148,7 @@ export default function App() {
     try {
       const entry = await api.createTimeEntry({
         category: manualCategory.trim(),
+        task_id: selectedTaskId || undefined,
         notes: manualNotes.trim() || undefined,
         started_at: startedAt.toISOString(),
         ended_at: endedAt.toISOString(),
@@ -150,6 +159,40 @@ export default function App() {
       setNotice('Запись времени сохранена.')
     } catch (error) { setNotice(apiMessage(error)) }
     finally { setSavingEntry(false) }
+  }
+  function beginEditEntry(entry: TimeEntry) {
+    setEditingEntry(entry)
+    setEditCategory(entry.category)
+    setEditNotes(entry.notes ?? '')
+    setEditTaskId(entry.task_id ?? '')
+    setEditStart(localDateTimeValue(new Date(entry.started_at)))
+    setEditEnd(localDateTimeValue(new Date(entry.ended_at)))
+    setNotice('')
+  }
+  async function saveEditedEntry(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!editingEntry) return
+    const startedAt = new Date(editStart)
+    const endedAt = new Date(editEnd)
+    if (!editCategory.trim() || Number.isNaN(startedAt.getTime()) || Number.isNaN(endedAt.getTime()) || endedAt <= startedAt) {
+      setNotice('Проверь категорию и временной интервал: окончание должно быть позже начала.')
+      return
+    }
+    setUpdatingEntry(true)
+    setNotice('')
+    try {
+      const updated = await api.updateTimeEntry(editingEntry.id, {
+        category: editCategory.trim(),
+        notes: editNotes.trim() || null,
+        task_id: editTaskId || null,
+        started_at: startedAt.toISOString(),
+        ended_at: endedAt.toISOString(),
+      })
+      setTimeEntries((current) => current.map((entry) => entry.id === updated.id ? updated : entry).sort((a, b) => b.started_at.localeCompare(a.started_at)))
+      setEditingEntry(null)
+      setNotice('Запись времени обновлена.')
+    } catch (error) { setNotice(apiMessage(error)) }
+    finally { setUpdatingEntry(false) }
   }
   async function toggleTask(task: ApiTask) {
     setNotice('')
@@ -204,16 +247,32 @@ export default function App() {
             <article className="panel"><span>Учтено времени</span><strong>{formatClock(timeEntries.reduce((sum, entry) => sum + entry.duration_seconds, 0))}</strong></article>
             <article className="panel"><span>Таймер сейчас</span><strong>{timer ? formatClock(seconds) : 'Не запущен'}</strong></article>
           </div>
+          <article className="panel"><div className="panel-title"><div><h3>План против факта</h3><p>Сопоставление оценки задачи с учтённым временем по связанным записям.</p></div></div>
+            <div className="entry-list">{tasks.filter((task) => task.estimated_minutes !== null).map((task) => {
+              const actualSeconds = timeEntries.filter((entry) => entry.task_id === task.id).reduce((sum, entry) => sum + entry.duration_seconds, 0)
+              const plannedSeconds = (task.estimated_minutes ?? 0) * 60
+              const delta = actualSeconds - plannedSeconds
+              const ratio = plannedSeconds > 0 ? Math.min(100, actualSeconds / plannedSeconds * 100) : 0
+              return <div className="plan-row" key={task.id}><div className="task-copy"><b>{task.title}</b><span>{formatDuration(task.estimated_minutes)} план · {formatClock(actualSeconds)} факт {actualSeconds > plannedSeconds ? `· +${formatClock(delta)}` : actualSeconds < plannedSeconds ? `· −${formatClock(-delta)}` : '· в пределах оценки'}</span><div className="progress"><span style={{ width: `${ratio}%` }} /></div></div><button className="quiet" onClick={() => { setSelectedTaskId(task.id); setManualCategory(task.category); setNotice(`Новая запись будет связана с задачей «${task.title}».`) }}>Добавить факт</button></div>
+            })}{!tasks.some((task) => task.estimated_minutes !== null) && <div className="empty"><Clock3 size={20}/><b>Пока нечего сравнивать</b><span>Добавь оценку времени задаче и свяжи с ней записи фактической работы.</span></div>}</div>
+          </article>
           <article className="panel"><div className="panel-title"><div><h3>Добавить прошедшую сессию</h3><p>Например, учёба, разработка или занятие с учеником.</p></div></div>
             <form className="manual-entry-form" onSubmit={(event) => void addManualEntry(event)}>
               <label>Направление<input value={manualCategory} onChange={(event) => setManualCategory(event.target.value)} required maxLength={64} placeholder="study, ml, tutoring…" /></label>
+              <label>Связанная задача<select value={selectedTaskId} onChange={(event) => setSelectedTaskId(event.target.value)}><option value="">Без задачи</option>{tasks.map((task) => <option value={task.id} key={task.id}>{task.title}</option>)}</select></label>
               <div className="manual-dates"><label>Начало<input type="datetime-local" value={manualStart} onChange={(event) => setManualStart(event.target.value)} required /></label><label>Окончание<input type="datetime-local" value={manualEnd} onChange={(event) => setManualEnd(event.target.value)} required /></label></div>
               <label>Заметка<textarea value={manualNotes} onChange={(event) => setManualNotes(event.target.value)} maxLength={10000} rows={2} placeholder="Что именно делал?" /></label>
               <button className="primary" type="submit" disabled={savingEntry || !online}>{savingEntry ? 'Сохраняю…' : <><Plus size={15}/> Сохранить время</>}</button>
             </form>
           </article>
           <article className="panel"><div className="panel-title"><div><h3>История времени</h3><p>Последние {timeEntries.length} записей</p></div></div>
-            <div className="entry-list">{timeEntries.map((entry) => <div className="entry-row" key={entry.id}><div className={'marker ' + categoryColor(entry.category)} /><div className="task-copy"><b>{entry.category}</b><span>{new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(entry.started_at))} — {new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date(entry.ended_at))}{entry.notes ? ' · ' + entry.notes : ''}</span></div><span className="duration">{formatClock(entry.duration_seconds)}</span></div>)}
+            <div className="entry-list">{timeEntries.map((entry) => <div className="entry-row" key={entry.id}>{editingEntry?.id === entry.id ? <form className="edit-entry-form" onSubmit={(event) => void saveEditedEntry(event)}>
+                <label>Направление<input value={editCategory} onChange={(event) => setEditCategory(event.target.value)} required maxLength={64} /></label>
+                <label>Задача<select value={editTaskId} onChange={(event) => setEditTaskId(event.target.value)}><option value="">Без задачи</option>{tasks.map((task) => <option value={task.id} key={task.id}>{task.title}</option>)}</select></label>
+                <div className="manual-dates"><label>Начало<input type="datetime-local" value={editStart} onChange={(event) => setEditStart(event.target.value)} required /></label><label>Окончание<input type="datetime-local" value={editEnd} onChange={(event) => setEditEnd(event.target.value)} required /></label></div>
+                <label>Заметка<textarea value={editNotes} onChange={(event) => setEditNotes(event.target.value)} maxLength={10000} rows={2} /></label>
+                <div className="entry-actions"><button className="primary" type="submit" disabled={updatingEntry || !online}>{updatingEntry ? 'Сохраняю…' : 'Сохранить'}</button><button className="quiet" type="button" onClick={() => setEditingEntry(null)}>Отмена</button></div>
+              </form> : <><div className={'marker ' + categoryColor(entry.category)} /><div className="task-copy"><b>{entry.category}{entry.task_id ? ` · ${tasks.find((task) => task.id === entry.task_id)?.title ?? 'Задача'}` : ''}</b><span>{new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(entry.started_at))} — {new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date(entry.ended_at))}{entry.notes ? ' · ' + entry.notes : ''}</span></div><span className="duration">{formatClock(entry.duration_seconds)}</span><button className="quiet" disabled={!online} onClick={() => beginEditEntry(entry)}>Изменить</button></>}</div>)}
               {!timeEntries.length && <div className="empty"><Clock3 size={20}/><b>Записей пока нет</b><span>Добавь первую ручную запись или заверши фокус-сессию таймером.</span></div>}
             </div>
           </article>
