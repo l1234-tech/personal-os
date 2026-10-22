@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -86,6 +87,8 @@ def create_task(
     data["title"] = data["title"].strip()
     if not data["title"]:
         raise HTTPException(status_code=422, detail="Task title cannot be blank")
+    if data.get("status") == "done":
+        data["completed_at"] = datetime.now(UTC)
     task = Task(user_id=user.id, **data)
     db.add(task)
     db.commit()
@@ -109,6 +112,13 @@ def update_task(
         changes["title"] = changes["title"].strip()
         if not changes["title"]:
             raise HTTPException(status_code=422, detail="Task title cannot be blank")
+    if "project_id" in changes:
+        validate_project_link(db, user.id, changes["project_id"])
+    if "status" in changes:
+        if changes["status"] == "done" and task.status != "done":
+            task.completed_at = datetime.now(UTC)
+        elif changes["status"] != "done":
+            task.completed_at = None
     for name, value in changes.items():
         setattr(task, name, value)
     db.commit()
