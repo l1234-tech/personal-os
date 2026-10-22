@@ -37,7 +37,7 @@
 - [ ] GitHub OAuth, repo selection and sync status.
 
 ## Stage 6 — Analytics and automation (feat/integrations-analytics)
-- [ ] Tested formulas for daily/weekly outcome reports.
+- [x] Frontend daily/weekly time analytics from persisted entries and task completion; tested formulas for outcome reports remain a follow-up.
 - [ ] Worker queue with retry/backoff and deduplication.
 - [ ] Telegram account linking, preferences and notifications.
 
