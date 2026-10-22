@@ -34,3 +34,6 @@
   .module-row { align-items: flex-start; }
   .module-row strong { font-size: 12px; }
 }
+
+.recommendations { margin: 0; padding-left: 20px; color: var(--muted, #666); font-size: 13px; line-height: 1.7; }
+.recommendations li + li { margin-top: 8px; }
