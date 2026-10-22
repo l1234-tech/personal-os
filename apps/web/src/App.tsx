@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { ArrowRight, Bell, BookOpen, CalendarDays, Check, ChevronDown, Clock3, Command, Compass, GraduationCap, LayoutDashboard, ListTodo, LogOut, Plus, Search, Settings2, Sparkles, Timer, UsersRound, Wallet, Zap, AlertCircle, RefreshCw } from 'lucide-react'
+import { ArrowRight, Bell, BookOpen, CalendarDays, BarChart3, Check, ChevronDown, Clock3, Command, Compass, GraduationCap, LayoutDashboard, ListTodo, LogOut, Plus, Search, Settings2, Sparkles, Timer, UsersRound, Wallet, Zap, AlertCircle, RefreshCw } from 'lucide-react'
 import AuthScreen from './AuthScreen'
 import { api, ApiError, type ApiTask, type TaskPriority, type TimeEntry, type TimerState, type User } from './api'
 
 const groups = [
-  { title: 'РАБОЧЕЕ ПРОСТРАНСТВО', items: [{ label: 'Обзор дня', icon: LayoutDashboard }, { label: 'Планировщик', icon: CalendarDays }, { label: 'Задачи', icon: ListTodo }, { label: 'Фокус и время', icon: Timer }] },
+  { title: 'РАБОЧЕЕ ПРОСТРАНСТВО', items: [{ label: 'Обзор дня', icon: LayoutDashboard }, { label: 'Планировщик', icon: CalendarDays }, { label: 'Задачи', icon: ListTodo }, { label: 'Фокус и время', icon: Timer }, { label: 'Аналитика', icon: BarChart3 }] },
   { title: 'НАПРАВЛЕНИЯ', items: [{ label: 'Учёба', icon: GraduationCap }, { label: 'ML и проекты', icon: Compass }, { label: 'Репетиторство', icon: UsersRound }, { label: 'Финансы', icon: Wallet }] },
 ]
 const areaColors: Record<string, string> = { itmo: 'violet', study: 'violet', education: 'violet', ml: 'blue', project: 'blue', tutoring: 'amber', personal: 'violet' }
@@ -36,6 +36,8 @@ export default function App() {
   const [authResolved, setAuthResolved] = useState(false)
   const [tasks, setTasks] = useState<ApiTask[]>([])
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)
+  const [usingCachedData, setUsingCachedData] = useState(false)
   const [manualCategory, setManualCategory] = useState('study')
   const [selectedTaskId, setSelectedTaskId] = useState('')
   const [manualNotes, setManualNotes] = useState('')
@@ -72,19 +74,29 @@ export default function App() {
       setTimer(loadedTimer)
       setTimeEntries(loadedEntries)
       setSeconds(loadedTimer?.elapsed_seconds ?? 0)
+      const syncedAt = new Date().toISOString()
+      setLastSyncedAt(syncedAt)
+      setUsingCachedData(false)
+      try {
+        window.localStorage.setItem('personal-os-read-cache-v1', JSON.stringify({ owner_id: user?.id, saved_at: syncedAt, tasks: loadedTasks, time_entries: loadedEntries }))
+      } catch { /* The app still works when browser storage is unavailable. */ }
       setNotice('')
     } catch (error) {
       setNotice(apiMessage(error))
       if (error instanceof ApiError && error.status === 401) {
         setUser(null)
         setTasks([])
+        setTimeEntries([])
         setTimer(null)
+        setLastSyncedAt(null)
+        setUsingCachedData(false)
+        try { window.localStorage.removeItem('personal-os-read-cache-v1') } catch { /* Storage may be unavailable. */ }
       }
     } finally {
       setLoading(false)
       setAuthResolved(true)
     }
-  }, [])
+  }, [user?.id])
   useEffect(() => {
     let cancelled = false
     api.me().then((currentUser) => { if (!cancelled) setUser(currentUser) })
@@ -100,7 +112,22 @@ export default function App() {
       window.removeEventListener('offline', offlineHandler)
     }
   }, [])
-  useEffect(() => { if (user) void refreshWorkspace() }, [user, refreshWorkspace])
+  useEffect(() => {
+    if (!user) return
+    try {
+      const raw = window.localStorage.getItem('personal-os-read-cache-v1')
+      if (raw) {
+        const cached = JSON.parse(raw) as { owner_id?: string; saved_at?: string; tasks?: ApiTask[]; time_entries?: TimeEntry[] }
+        if (cached.owner_id === user.id && Array.isArray(cached.tasks) && Array.isArray(cached.time_entries) && typeof cached.saved_at === 'string') {
+          setTasks(cached.tasks)
+          setTimeEntries(cached.time_entries)
+          setLastSyncedAt(cached.saved_at)
+          setUsingCachedData(true)
+        }
+      }
+    } catch { /* Ignore malformed or unavailable cache and load from the API. */ }
+    void refreshWorkspace()
+  }, [user, refreshWorkspace])
   useEffect(() => {
     if (!timer || timer.status !== 'running') return
     const startedAt = Date.now()
@@ -119,6 +146,29 @@ export default function App() {
   const dateLabel = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
   const timeLabel = formatClock(seconds)
   const openTasks = tasks.filter((task) => task.status !== 'done' && task.status !== 'cancelled')
+  const analytics = useMemo(() => {
+    const today = new Date()
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today)
+      date.setHours(0, 0, 0, 0)
+      date.setDate(date.getDate() - (6 - index))
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+      const entries = timeEntries.filter((entry) => {
+        const started = new Date(entry.started_at)
+        return started.getFullYear() === date.getFullYear() && started.getMonth() === date.getMonth() && started.getDate() === date.getDate()
+      })
+      return { key, label: new Intl.DateTimeFormat('ru-RU', { weekday: 'short' }).format(date), dateLabel: new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(date), seconds: entries.reduce((sum, entry) => sum + entry.duration_seconds, 0), count: entries.length }
+    })
+    const categoryMap = new Map<string, number>()
+    timeEntries.forEach((entry) => categoryMap.set(entry.category, (categoryMap.get(entry.category) ?? 0) + entry.duration_seconds))
+    const categories = Array.from(categoryMap, ([name, seconds]) => ({ name, seconds })).sort((a, b) => b.seconds - a.seconds)
+    const weekSeconds = days.reduce((sum, day) => sum + day.seconds, 0)
+    const todaySeconds = days[days.length - 1]?.seconds ?? 0
+    const weekEntries = days.reduce((sum, day) => sum + day.count, 0)
+    const maxDaySeconds = Math.max(1, ...days.map((day) => day.seconds))
+    const maxCategorySeconds = Math.max(1, ...categories.map((item) => item.seconds))
+    return { days, categories, weekSeconds, todaySeconds, weekEntries, maxDaySeconds, maxCategorySeconds }
+  }, [timeEntries])
   async function addTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const title = draft.trim()
@@ -223,7 +273,7 @@ export default function App() {
   }
   async function logout() {
     try { await api.logout() } catch { /* Session may already be expired. */ }
-    setUser(null); setTasks([]); setTimeEntries([]); setTimer(null); setSeconds(0); setNotice('')
+    setUser(null); setTasks([]); setTimeEntries([]); setTimer(null); setSeconds(0); setLastSyncedAt(null); setUsingCachedData(false); setNotice(''); try { window.localStorage.removeItem('personal-os-read-cache-v1') } catch { /* Storage may be unavailable. */ }
   }
   if (!authResolved) return <div className="initial-loading"><span className="loading-mark"><Command size={22} /></span><p>Открываю личное пространство…</p></div>
   if (!user) return <AuthScreen onAuthenticated={setUser} />
@@ -232,15 +282,37 @@ export default function App() {
       <a className="brand" href="#home"><span className="brand-mark"><Command size={20}/></span><span><strong>personal<span>OS</span></strong><small>YOUR LIFE, IN SYNC</small></span></a>
       <button className="workspace"><span className="workspace-mark">P</span><span><b>Моё пространство</b><small>Personal workspace</small></span><ChevronDown size={15}/></button>
       <nav>{groups.map((group) => <div className="nav-group" key={group.title}><p>{group.title}</p>{group.items.map(({ label, icon: Icon }) => <button key={label} className={activePage === label ? 'nav-link active' : 'nav-link'} onClick={() => setActivePage(label)}><Icon size={17}/><span>{label}</span>{label === 'Задачи' && <em>{openTasks.length}</em>}</button>)}</div>)}</nav>
-      <div className="side-bottom"><div className="sync"><i className={online ? 'online-dot' : 'offline-dot'}/> <span><b>{online ? 'Подключение активно' : 'Нет сети'}</b><small>{loading ? 'Синхронизация…' : 'Данные из личного API'}</small></span></div><button className="nav-link" onClick={() => setActivePage('Настройки')}><Settings2 size={17}/><span>Настройки</span></button><div className="profile"><div>{user.email.slice(0, 1).toUpperCase()}</div><span><b>{user.email}</b><small>Личный аккаунт</small></span><button className="quiet logout-button" onClick={() => void logout()} title="Выйти" aria-label="Выйти"><LogOut size={15}/></button></div></div>
+      <div className="side-bottom"><div className="sync"><i className={online ? 'online-dot' : 'offline-dot'}/> <span><b>{online ? 'Подключение активно' : 'Нет сети'}</b><small>{loading ? 'Синхронизация…' : usingCachedData ? 'Кеш · только чтение' : lastSyncedAt ? `Синхр. ${new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date(lastSyncedAt))}` : 'Данные из личного API'}</small></span></div><button className="nav-link" onClick={() => setActivePage('Настройки')}><Settings2 size={17}/><span>Настройки</span></button><div className="profile"><div>{user.email.slice(0, 1).toUpperCase()}</div><span><b>{user.email}</b><small>Личный аккаунт</small></span><button className="quiet logout-button" onClick={() => void logout()} title="Выйти" aria-label="Выйти"><LogOut size={15}/></button></div></div>
     </aside>
     <main id="home" className="main">
       <header className="topbar"><div className="crumb"><span>Рабочее пространство</span><ArrowRight size={13}/><b>{activePage}</b></div><div className="top-actions"><label className="search"><Search size={15}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по задачам..."/><kbd>⌘ K</kbd></label><button className="icon-button" aria-label="Уведомления"><Bell size={18}/></button><div className="avatar">{user.email.slice(0, 1).toUpperCase()}</div></div></header>
       <div className="content">
         <section className="welcome"><div><p className="date">{dateLabel}</p><h1>Личное пространство <span>✳</span></h1><p className="subtitle">Планы становятся результатами. Сегодня — только реальные данные.</p></div><button className="primary" onClick={() => setComposer(true)}><Plus size={17}/> Новая задача</button></section>
-        {!online && <div className="notice offline-notice"><AlertCircle size={16}/> Нет соединения. Изменения не сохраняются офлайн; дождись сети и повтори действие.</div>}
+        {!online && <div className="notice offline-notice"><AlertCircle size={16}/><span>Нет соединения. {usingCachedData ? 'Показаны последние сохранённые задачи и записи времени в режиме чтения.' : 'Дождись сети и повтори действие.'} {lastSyncedAt ? `Последняя синхронизация: ${new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(lastSyncedAt))}.` : 'Нет сохранённой копии.'}</span></div>}
         {notice && <div className="notice" role="status"><AlertCircle size={16}/><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Закрыть сообщение">×</button></div>}
-        {activePage === 'Настройки' ? <section className="panel module-placeholder"><div className="module-icon"><Settings2 size={20}/></div><p className="date-label">АККАУНТ</p><h1>Настройки пространства</h1><p>Ты вошёл как <b>{user.email}</b>. Сейчас доступна базовая сессия; настройки интеграций и уведомлений будут подключены отдельными этапами.</p><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить данные</button></section> : activePage === 'Фокус и время' ? <section className="time-page">
+        {activePage === 'Аналитика' ? <section className="analytics-page">
+          <div className="welcome"><div><p className="date">ФАКТИЧЕСКИЕ РЕЗУЛЬТАТЫ</p><h1>Аналитика времени</h1><p className="subtitle">Смотри, куда уходит время, без выдуманных данных и оценок продуктивности по часам.</p></div><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить</button></div>
+          <div className="time-summary">
+            <article className="panel"><span>Сегодня</span><strong>{formatClock(analytics.todaySeconds)}</strong></article>
+            <article className="panel"><span>Последние 7 дней</span><strong>{formatClock(analytics.weekSeconds)}</strong></article>
+            <article className="panel"><span>Записей за 7 дней</span><strong>{analytics.weekEntries}</strong></article>
+          </div>
+          <article className="panel analytics-panel"><div className="panel-title"><div><h3>По дням</h3><p>Запись относится к дню её начала; показаны последние семь календарных дней.</p></div></div>
+            <div className="weekly-chart" role="img" aria-label="Фактическое время по дням за последние семь дней">
+              {analytics.days.map((day) => <div className="weekly-column" key={day.key}><span className="weekly-value">{day.seconds ? formatClock(day.seconds) : '—'}</span><div className="weekly-track"><span style={{ height: `${day.seconds / analytics.maxDaySeconds * 100}%` }} /></div><b>{day.label}</b><small>{day.dateLabel}</small></div>)}
+            </div>
+            {!analytics.weekEntries && <div className="empty"><Clock3 size={20}/><b>За последние семь дней записей нет</b><span>Добавь ручную запись или заверши фокус-сессию — аналитика обновится автоматически.</span></div>}
+          </article>
+          <article className="panel analytics-panel"><div className="panel-title"><div><h3>По направлениям</h3><p>Распределение всех загруженных записей времени по категории.</p></div></div>
+            <div className="category-breakdown">{analytics.categories.map((item) => <div className="category-row" key={item.name}><div className="category-label"><span>{item.name}</span><b>{formatClock(item.seconds)}</b></div><div className="progress"><span style={{ width: `${item.seconds / analytics.maxCategorySeconds * 100}%` }} /></div></div>)}
+              {!analytics.categories.length && <div className="empty"><Clock3 size={20}/><b>Категории появятся после первой записи</b><span>Каждая запись времени учитывается в направлении, которое указано при сохранении.</span></div>}
+            </div>
+          </article>
+          <article className="panel analytics-panel"><div className="panel-title"><div><h3>Результаты по задачам</h3><p>Завершённые задачи и оценки времени — отдельные показатели.</p></div></div>
+            <div className="analytics-task-stats"><div><span>Задач всего</span><b>{tasks.length}</b></div><div><span>Завершено</span><b>{done}</b></div><div><span>Доля завершённых</span><b>{tasks.length ? Math.round(done / tasks.length * 100) : 0}%</b></div><div><span>С оценкой времени</span><b>{tasks.filter((task) => task.estimated_minutes !== null).length}</b></div></div>
+            <p className="analytics-footnote">Время считается по сохранённым записям. Это не оценка качества работы: для содержательного отчёта позже добавим цели, milestones и дневные результаты.</p>
+          </article>
+        </section> : activePage === 'Настройки' ? <section className="panel module-placeholder"><div className="module-icon"><Settings2 size={20}/></div><p className="date-label">АККАУНТ</p><h1>Настройки пространства</h1><p>Ты вошёл как <b>{user.email}</b>. Сейчас доступна базовая сессия; настройки интеграций и уведомлений будут подключены отдельными этапами.</p><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить данные</button></section> : activePage === 'Фокус и время' ? <section className="time-page">
           <div className="welcome"><div><p className="date">УЧЁТ ФАКТИЧЕСКОЙ РАБОТЫ</p><h1>Фокус и время</h1><p className="subtitle">Записывай время по факту и сравнивай его с оценками задач.</p></div><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить</button></div>
           <div className="time-summary">
             <article className="panel"><span>Записей времени</span><strong>{timeEntries.length}</strong></article>
