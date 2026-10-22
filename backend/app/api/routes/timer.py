@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Literal, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -36,7 +37,7 @@ def to_timer_read(session: TimerSession, now: datetime | None = None) -> TimerRe
         task_id=session.task_id,
         category=session.category,
         started_at=session.started_at,
-        status=session.status,
+        status=cast(Literal["running", "paused", "stopped"], session.status),
         elapsed_seconds=elapsed,
         finished_at=session.finished_at,
     )
