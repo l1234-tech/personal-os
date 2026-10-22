@@ -49,7 +49,6 @@ export default function App() {
   const [notice, setNotice] = useState('')
   const [filter, setFilter] = useState<'all' | 'open' | 'done'>('open')
   const [online, setOnline] = useState(navigator.onLine)
-
   const refreshWorkspace = useCallback(async () => {
     setLoading(true)
     try {
@@ -70,16 +69,11 @@ export default function App() {
       setAuthResolved(true)
     }
   }, [])
-
   useEffect(() => {
     let cancelled = false
-    api.me().then((currentUser) => {
-      if (!cancelled) setUser(currentUser)
-    }).catch(() => {
-      if (!cancelled) setUser(null)
-    }).finally(() => {
-      if (!cancelled) setAuthResolved(true)
-    })
+    api.me().then((currentUser) => { if (!cancelled) setUser(currentUser) })
+      .catch(() => { if (!cancelled) setUser(null) })
+      .finally(() => { if (!cancelled) setAuthResolved(true) })
     const onlineHandler = () => setOnline(true)
     const offlineHandler = () => setOnline(false)
     window.addEventListener('online', onlineHandler)
@@ -90,11 +84,7 @@ export default function App() {
       window.removeEventListener('offline', offlineHandler)
     }
   }, [])
-
-  useEffect(() => {
-    if (user) void refreshWorkspace()
-  }, [user, refreshWorkspace])
-
+  useEffect(() => { if (user) void refreshWorkspace() }, [user, refreshWorkspace])
   useEffect(() => {
     if (!timer || timer.status !== 'running') return
     const startedAt = Date.now()
@@ -104,7 +94,6 @@ export default function App() {
     const interval = window.setInterval(tick, 1000)
     return () => window.clearInterval(interval)
   }, [timer?.id, timer?.status, timer?.elapsed_seconds])
-
   const done = tasks.filter((task) => task.status === 'done').length
   const visible = useMemo(() => tasks.filter((task) => {
     const matchesQuery = `${task.title} ${task.description ?? ''} ${task.category}`.toLowerCase().includes(query.toLowerCase())
@@ -114,13 +103,11 @@ export default function App() {
   const dateLabel = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
   const timeLabel = formatClock(seconds)
   const openTasks = tasks.filter((task) => task.status !== 'done' && task.status !== 'cancelled')
-
   async function addTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const title = draft.trim()
     if (!title) return
-    setSavingTask(true)
-    setNotice('')
+    setSavingTask(true); setNotice('')
     try {
       const parsedEstimate = estimatedMinutes.trim() ? Number(estimatedMinutes) : undefined
       if (parsedEstimate !== undefined && (!Number.isInteger(parsedEstimate) || parsedEstimate <= 0)) {
@@ -128,29 +115,19 @@ export default function App() {
         return
       }
       const task = await api.createTask({ title, category, priority, ...(parsedEstimate !== undefined ? { estimated_minutes: parsedEstimate } : {}) })
-      setTasks((current) => [task, ...current])
-      setDraft('')
-      setComposer(false)
-    } catch (error) {
-      setNotice(apiMessage(error))
-    } finally {
-      setSavingTask(false)
-    }
+      setTasks((current) => [task, ...current]); setDraft(''); setComposer(false)
+    } catch (error) { setNotice(apiMessage(error)) }
+    finally { setSavingTask(false) }
   }
-
   async function toggleTask(task: ApiTask) {
     setNotice('')
     try {
       const updated = await api.updateTask(task.id, { status: task.status === 'done' ? 'todo' : 'done' })
       setTasks((current) => current.map((item) => item.id === updated.id ? updated : item))
-    } catch (error) {
-      setNotice(apiMessage(error))
-    }
+    } catch (error) { setNotice(apiMessage(error)) }
   }
-
   async function changeTimerAction(action: 'start' | 'pause' | 'resume' | 'stop') {
-    setTimerBusy(true)
-    setNotice('')
+    setTimerBusy(true); setNotice('')
     try {
       let next: TimerState
       if (action === 'start') next = await api.startTimer(category)
@@ -158,40 +135,23 @@ export default function App() {
       else if (action === 'resume') next = await api.resumeTimer()
       else next = await api.stopTimer()
       if (action === 'stop') {
-        setTimer(null)
-        setSeconds(0)
-        setTasks(await api.tasks())
+        setTimer(null); setSeconds(0); setTasks(await api.tasks())
         setNotice('Фокус-сессия сохранена в фактическом времени.')
-      } else {
-        setTimer(next)
-        setSeconds(next.elapsed_seconds)
-      }
+      } else { setTimer(next); setSeconds(next.elapsed_seconds) }
     } catch (error) {
       setNotice(apiMessage(error))
       if (error instanceof ApiError && error.status === 409) {
-        try {
-          const current = await api.currentTimer()
-          setTimer(current)
-          setSeconds(current?.elapsed_seconds ?? 0)
-        } catch { /* Keep the original actionable error. */ }
+        try { const current = await api.currentTimer(); setTimer(current); setSeconds(current?.elapsed_seconds ?? 0) }
+        catch { /* Keep the original actionable error. */ }
       }
-    } finally {
-      setTimerBusy(false)
-    }
+    } finally { setTimerBusy(false) }
   }
-
   async function logout() {
-    try { await api.logout() } catch { /* The session may already be expired. */ }
-    setUser(null)
-    setTasks([])
-    setTimer(null)
-    setSeconds(0)
-    setNotice('')
+    try { await api.logout() } catch { /* Session may already be expired. */ }
+    setUser(null); setTasks([]); setTimer(null); setSeconds(0); setNotice('')
   }
-
   if (!authResolved) return <div className="initial-loading"><span className="loading-mark"><Command size={22} /></span><p>Открываю личное пространство…</p></div>
   if (!user) return <AuthScreen onAuthenticated={setUser} />
-
   return <div className="shell">
     <aside className="sidebar">
       <a className="brand" href="#home"><span className="brand-mark"><Command size={20}/></span><span><strong>personal<span>OS</span></strong><small>YOUR LIFE, IN SYNC</small></span></a>
