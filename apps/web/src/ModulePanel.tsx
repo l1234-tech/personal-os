@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { ArrowRight, BookOpen, CheckCircle2, Clock3, Plus, UsersRound } from 'lucide-react'
 import { api, type DailyAnalytics, type Project, type Student, type Subject, type TimeEntry } from './api'
 
@@ -19,7 +19,7 @@ export default function ModulePanel({ page }: Props) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  async function load() {
+  const load = useCallback(async () => {
     setError('')
     try {
       if (page === 'Репетиторство') setStudents(await api.students())
@@ -30,9 +30,9 @@ export default function ModulePanel({ page }: Props) {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Не удалось загрузить данные')
     }
-  }
+  }, [page])
 
-  useEffect(() => { void load() }, [page])
+  useEffect(() => { void load() }, [load])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
