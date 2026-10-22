@@ -52,9 +52,10 @@ export default function App() {
   const refreshWorkspace = useCallback(async () => {
     setLoading(true)
     try {
-      const [loadedTasks, loadedTimer] = await Promise.all([api.tasks(), api.currentTimer()])
+      const [loadedTasks, loadedTimer, loadedEntries] = await Promise.all([api.tasks(), api.currentTimer(), api.timeEntries()])
       setTasks(loadedTasks)
       setTimer(loadedTimer)
+      setTimeEntries(loadedEntries)
       setSeconds(loadedTimer?.elapsed_seconds ?? 0)
       setNotice('')
     } catch (error) {
