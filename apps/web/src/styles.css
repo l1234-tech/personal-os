@@ -346,3 +346,22 @@ body,.shell,.main { background:#f2f4f8; color:#293346; }
 .global-toast { background:#34405a; border-color:#495875; }
 .notice { background:#eef2f9; border-color:#dce3ef; color:#3f4b61; }
 @media(prefers-color-scheme:dark) { /* This workspace intentionally keeps its chosen calm light palette. */ }
+
+
+/* Focused workspaces for planner and life areas */
+.area-page { display:grid; gap:18px; padding:22px; min-width:0; }
+.area-page .welcome { margin-bottom:0; }
+.area-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.area-summary .panel { display:grid; gap:8px; padding:18px; }
+.area-summary .panel span { color:#667286; font-size:13px; }
+.area-summary .panel strong { color:#293346; font:700 28px Manrope,sans-serif; }
+.area-tip { display:flex; align-items:flex-start; gap:12px; padding:18px; color:#5e6c88; }
+.area-tip>svg { color:#7885b5; flex-shrink:0; margin-top:2px; }
+.area-tip b { display:block; color:#34415a; font-size:14px; margin-bottom:6px; }
+.area-tip p { margin:0; color:#667286; font-size:13px; line-height:1.7; }
+@media(max-width:700px) {
+ .area-page { padding:16px; }
+ .area-summary { grid-template-columns:1fr; gap:8px; }
+ .area-summary .panel { padding:13px; }
+ .area-summary .panel strong { font-size:24px; }
+}
