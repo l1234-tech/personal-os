@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react"
 import { ArrowRight, Command, KeyRound, LockKeyhole, ShieldCheck } from "lucide-react"
-import { api, User } from "./api"
+import { api, type User } from "./api"
 
 type Props = {
   onAuthenticated: (user: User) => void

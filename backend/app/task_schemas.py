@@ -15,6 +15,7 @@ def require_aware(value: datetime) -> datetime:
 
 
 class TaskCreate(BaseModel):
+    project_id: UUID | None = None
     title: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=10000)
     status: TaskStatus = "todo"
@@ -30,6 +31,7 @@ class TaskCreate(BaseModel):
 
 
 class TaskUpdate(BaseModel):
+    project_id: UUID | None = None
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=10000)
     status: TaskStatus | None = None
@@ -46,6 +48,7 @@ class TaskUpdate(BaseModel):
 
 class TaskRead(BaseModel):
     id: UUID
+    project_id: UUID | None
     title: str
     description: str | None
     status: TaskStatus
@@ -62,6 +65,7 @@ class TaskRead(BaseModel):
 class TimeEntryCreate(BaseModel):
     task_id: UUID | None = None
     student_id: UUID | None = None
+    project_id: UUID | None = None
     category: str = Field(default="personal", min_length=1, max_length=64)
     notes: str | None = Field(default=None, max_length=10000)
     started_at: datetime
@@ -83,6 +87,7 @@ class TimeEntryCreate(BaseModel):
 class TimeEntryUpdate(BaseModel):
     task_id: UUID | None = None
     student_id: UUID | None = None
+    project_id: UUID | None = None
     category: str | None = Field(default=None, min_length=1, max_length=64)
     notes: str | None = Field(default=None, max_length=10000)
     started_at: datetime | None = None
@@ -99,6 +104,7 @@ class TimeEntryRead(BaseModel):
     id: UUID
     task_id: UUID | None
     student_id: UUID | None
+    project_id: UUID | None
     category: str
     notes: str | None
     started_at: datetime
@@ -113,6 +119,7 @@ class TimeEntryRead(BaseModel):
 class TimerStart(BaseModel):
     task_id: UUID | None = None
     student_id: UUID | None = None
+    project_id: UUID | None = None
     category: str = Field(default="personal", min_length=1, max_length=64)
 
 
@@ -120,6 +127,7 @@ class TimerRead(BaseModel):
     id: UUID
     task_id: UUID | None
     student_id: UUID | None
+    project_id: UUID | None
     category: str
     started_at: datetime
     status: Literal["running", "paused", "stopped"]

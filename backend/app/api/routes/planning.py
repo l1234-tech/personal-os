@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user
 from app.db import get_db
 from app.integrations.google_calendar import (
-    GOOGLE_CALENDAR_API,
     calendar_events_url,
     get_access_token,
 )

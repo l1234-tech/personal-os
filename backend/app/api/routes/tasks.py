@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -9,6 +10,7 @@ from app.db import get_db
 from app.models import User
 from app.models_tasks import Task, TimeEntry
 from app.models_tutoring import Student
+from app.models_academic import Project
 from app.task_schemas import (
     TaskCreate,
     TaskRead,
@@ -49,6 +51,13 @@ def validate_student_link(db: Session, user_id: UUID, student_id: UUID | None) -
         raise HTTPException(status_code=404, detail="Student not found")
 
 
+def validate_project_link(db: Session, user_id: UUID, project_id: UUID | None) -> None:
+    if project_id is not None and db.scalar(
+        select(Project.id).where(Project.id == project_id, Project.user_id == user_id)
+    ) is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+
 @router.get("/tasks", response_model=list[TaskRead])
 def list_tasks(
     task_status: str | None = Query(
@@ -74,9 +83,12 @@ def create_task(
     user: User = Depends(get_current_user),  # noqa: B008
 ) -> Task:
     data = payload.model_dump()
+    validate_project_link(db, user.id, data["project_id"])
     data["title"] = data["title"].strip()
     if not data["title"]:
         raise HTTPException(status_code=422, detail="Task title cannot be blank")
+    if data.get("status") == "done":
+        data["completed_at"] = datetime.now(UTC)
     task = Task(user_id=user.id, **data)
     db.add(task)
     db.commit()
@@ -100,6 +112,13 @@ def update_task(
         changes["title"] = changes["title"].strip()
         if not changes["title"]:
             raise HTTPException(status_code=422, detail="Task title cannot be blank")
+    if "project_id" in changes:
+        validate_project_link(db, user.id, changes["project_id"])
+    if "status" in changes:
+        if changes["status"] == "done" and task.status != "done":
+            task.completed_at = datetime.now(UTC)
+        elif changes["status"] != "done":
+            task.completed_at = None
     for name, value in changes.items():
         setattr(task, name, value)
     db.commit()
@@ -142,6 +161,7 @@ def create_time_entry(
 ) -> TimeEntry:
     validate_task_link(db, user.id, payload.task_id)
     validate_student_link(db, user.id, payload.student_id)
+    validate_project_link(db, user.id, payload.project_id)
     duration = int((payload.ended_at - payload.started_at).total_seconds())
     if duration <= 0 or duration > 31_536_000:
         raise HTTPException(
@@ -152,6 +172,7 @@ def create_time_entry(
         user_id=user.id,
         task_id=payload.task_id,
         student_id=payload.student_id,
+        project_id=payload.project_id,
         category=payload.category,
         notes=payload.notes,
         started_at=payload.started_at,
@@ -180,10 +201,14 @@ def update_time_entry(
         if key in changes
     ):
         raise HTTPException(status_code=422, detail="Timestamps cannot be null")
+    if "project_id" in changes:
+        validate_project_link(db, user.id, changes["project_id"])
     if "task_id" in changes:
         validate_task_link(db, user.id, changes["task_id"])
     if "student_id" in changes:
         validate_student_link(db, user.id, changes["student_id"])
+    if "project_id" in changes:
+        validate_project_link(db, user.id, changes["project_id"])
     new_start = changes.get("started_at", entry.started_at)
     new_end = changes.get("ended_at", entry.ended_at)
     if new_end <= new_start:

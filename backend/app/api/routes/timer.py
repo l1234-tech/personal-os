@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Literal, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -11,6 +12,7 @@ from app.db import get_db
 from app.models import User
 from app.models_tasks import Task, TimeEntry, TimerSession
 from app.models_tutoring import Student
+from app.models_academic import Project
 from app.task_schemas import TimerRead, TimerStart
 
 router = APIRouter(prefix="/timer", tags=["time tracking"])
@@ -36,9 +38,10 @@ def to_timer_read(session: TimerSession, now: datetime | None = None) -> TimerRe
         id=session.id,
         task_id=session.task_id,
         student_id=session.student_id,
+        project_id=session.project_id,
         category=session.category,
         started_at=session.started_at,
-        status=session.status,
+        status=cast(Literal["running", "paused", "stopped"], session.status),
         elapsed_seconds=elapsed,
         finished_at=session.finished_at,
     )
@@ -60,6 +63,14 @@ def validate_student_owner(db: Session, user_id: UUID, student_id: UUID | None) 
         raise HTTPException(status_code=404, detail="Student not found")
 
 
+def validate_project_owner(db: Session, user_id: UUID, project_id: UUID | None) -> None:
+    if project_id is None:
+        return
+    project = db.scalar(select(Project.id).where(Project.id == project_id, Project.user_id == user_id))
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+
 @router.get("/current", response_model=TimerRead | None)
 def current_timer(
     db: Session = Depends(get_db),  # noqa: B008
@@ -79,11 +90,13 @@ def start_timer(
         raise HTTPException(status_code=409, detail="A timer is already active")
     validate_task_owner(db, user.id, payload.task_id)
     validate_student_owner(db, user.id, payload.student_id)
+    validate_project_owner(db, user.id, payload.project_id)
     now = datetime.now(UTC)
     session = TimerSession(
         user_id=user.id,
         task_id=payload.task_id,
         student_id=payload.student_id,
+        project_id=payload.project_id,
         category=payload.category,
         started_at=now,
         last_resumed_at=now,
@@ -151,6 +164,7 @@ def stop_timer(
         user_id=user.id,
         task_id=session.task_id,
         student_id=session.student_id,
+        project_id=session.project_id,
         category=session.category,
         notes=None,
         started_at=session.started_at,

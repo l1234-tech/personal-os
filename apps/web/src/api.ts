@@ -33,6 +33,33 @@ export type ApiTask = {
   updated_at: string
 }
 
+export type Student = { id: string; name: string; subject: string; rate_amount: string; currency_code: string; status: string }
+export type Subject = { id: string; name: string; semester: string; status: string; notes: string | null }
+export type Project = { id: string; name: string; description: string | null; project_type: string; status: string; goal: string | null }
+export type WeeklyAnalytics = {
+  week_start: string
+  week_end: string
+  completed_outcomes: number
+  completed_tasks: number
+  completed_academic_items: number
+  completed_project_milestones: number
+  completed_lessons: number
+  tracked_seconds: number
+  time_by_category: { category: string; seconds: number }[]
+  recommendations: string[]
+}
+export type DailyAnalytics = {
+  day: string
+  completed_tasks: number
+  completed_academic_items: number
+  completed_project_milestones: number
+  completed_lessons: number
+  overdue_tasks: number
+  tracked_seconds: number
+  time_by_category: { category: string; seconds: number }[]
+  recommendations: string[]
+}
+
 export type TimerState = {
   id: string
   task_id: string | null
@@ -134,6 +161,17 @@ export const api = {
   updateTask: (id: string, payload: Partial<Pick<ApiTask, "title" | "description" | "status" | "priority" | "category" | "due_at" | "estimated_minutes">>) =>
     request<ApiTask>(`/tasks/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(payload) }),
   currentTimer: () => request<TimerState | null>("/timer/current"),
+  students: () => request<Student[]>("/students"),
+  createStudent: (payload: { name: string; subject: string; rate_amount: number; currency_code: string }) =>
+    request<Student>("/students", { method: "POST", body: JSON.stringify(payload) }),
+  subjects: () => request<Subject[]>("/subjects"),
+  createSubject: (payload: { name: string; semester: string }) =>
+    request<Subject>("/subjects", { method: "POST", body: JSON.stringify(payload) }),
+  projects: () => request<Project[]>("/projects"),
+  createProject: (payload: { name: string; project_type: string }) =>
+    request<Project>("/projects", { method: "POST", body: JSON.stringify(payload) }),
+  dailyAnalytics: () => request<DailyAnalytics>("/analytics/daily"),
+  weeklyAnalytics: () => request<WeeklyAnalytics>("/analytics/weekly"),
   startTimer: (category: string, taskId?: string) =>
     request<TimerState>("/timer/start", {
       method: "POST",
