@@ -86,13 +86,17 @@ export default function App() {
       if (error instanceof ApiError && error.status === 401) {
         setUser(null)
         setTasks([])
+        setTimeEntries([])
         setTimer(null)
+        setLastSyncedAt(null)
+        setUsingCachedData(false)
+        try { window.localStorage.removeItem('personal-os-read-cache-v1') } catch { /* Storage may be unavailable. */ }
       }
     } finally {
       setLoading(false)
       setAuthResolved(true)
     }
-  }, [])
+  }, [user?.id])
   useEffect(() => {
     let cancelled = false
     api.me().then((currentUser) => { if (!cancelled) setUser(currentUser) })
