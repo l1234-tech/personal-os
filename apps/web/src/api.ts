@@ -82,6 +82,17 @@ export type TimeEntry = {
   created_at: string
 }
 
+export type GitHubRepository = {
+  id: number
+  name: string
+  full_name: string
+  html_url: string
+  private: boolean
+  default_branch: string
+  pushed_at: string | null
+  linked_project_id: string | null
+}
+export type TelegramStatus = { linked: boolean; telegram_user_id: string | null; linked_at: string | null }
 export type Integration = {
   id: string
   provider: string
@@ -168,6 +179,14 @@ export const api = {
   createSubject: (payload: { name: string; semester: string }) =>
     request<Subject>("/subjects", { method: "POST", body: JSON.stringify(payload) }),
   projects: () => request<Project[]>("/projects"),
+  connectGitHub: () => request<{ authorization_url: string; expires_at: string }>("/integrations/github/connect", { method: "POST" }),
+  githubRepositories: () => request<GitHubRepository[]>("/integrations/github/repos"),
+  linkGitHubRepository: (projectId: string, payload: { repository_id: number; full_name: string }) =>
+    request<GitHubRepository>(`/integrations/github/projects/${encodeURIComponent(projectId)}/repo`, {
+      method: "PUT", body: JSON.stringify(payload),
+    }),
+  telegramStatus: () => request<TelegramStatus>("/telegram/status"),
+  createTelegramLink: () => request<{ link_url: string; expires_at: string }>("/telegram/link", { method: "POST" }),
   createProject: (payload: { name: string; project_type: string }) =>
     request<Project>("/projects", { method: "POST", body: JSON.stringify(payload) }),
   dailyAnalytics: () => request<DailyAnalytics>("/analytics/daily"),

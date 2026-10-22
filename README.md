@@ -23,7 +23,7 @@
 2. Выполните `docker compose up --build`.
 3. Web: http://localhost:5173; API: http://localhost:8000; Swagger: http://localhost:8000/docs; health: http://localhost:8000/api/v1/health.
 
-Документация: [ТЗ](docs/SPEC.md), [архитектура](docs/ARCHITECTURE.md), [модель данных](docs/DATA_MODEL.md), [безопасность](docs/SECURITY.md), [roadmap](docs/ROADMAP.md), [локальная разработка](docs/DEVELOPMENT.md).
+Документация: [ТЗ](docs/SPEC.md), [архитектура](docs/ARCHITECTURE.md), [модель данных](docs/DATA_MODEL.md), [безопасность](docs/SECURITY.md), [roadmap](docs/ROADMAP.md), [локальная разработка](docs/DEVELOPMENT.md), [настройка интеграций](docs/INTEGRATIONS.md).
 
 > **Статус: активная разработка, не production-ready.** В feature-ветках реализуются авторизация, CRUD API, таймер, интеграции, tutoring CRM, учёба/проекты и outcome-based аналитика. Перед использованием с реальными данными нужно дождаться зелёного CI, проверить весь сценарий миграций/восстановления резервной копии, OAuth-настройки и production-конфигурацию.
 
@@ -36,5 +36,6 @@
 - `feat/tutoring`
 - `feat/studies-projects`
 - `feat/integrations-analytics`
+- `feat/integrations-next`
 
 Правила: backend проверяет ownership каждого объекта; внешние изменения требуют подтверждения; план не равен факту; начисление не равно оплате; фоновые операции идемпотентны; не коммитить `.env` и реальные данные.
