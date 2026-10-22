@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { ArrowRight, BookOpen, CheckCircle2, Clock3, Plus, UsersRound } from 'lucide-react'
-import { api, type DailyAnalytics, type Project, type Student, type Subject, type TimeEntry } from './api'
+import { api, type DailyAnalytics, type Project, type Student, type Subject, type TimeEntry, type WeeklyAnalytics } from './api'
 
 type Props = { page: string }
 
@@ -10,6 +10,7 @@ export default function ModulePanel({ page }: Props) {
   const [projects, setProjects] = useState<Project[]>([])
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [daily, setDaily] = useState<DailyAnalytics | null>(null)
+  const [weekly, setWeekly] = useState<WeeklyAnalytics | null>(null)
   const [name, setName] = useState('')
   const [subject, setSubject] = useState('')
   const [semester, setSemester] = useState('2026 осень')
@@ -26,7 +27,11 @@ export default function ModulePanel({ page }: Props) {
       else if (page === 'Учёба') setSubjects(await api.subjects())
       else if (page === 'ML и проекты') setProjects(await api.projects())
       else if (page === 'Фокус и время') setEntries(await api.timeEntries())
-      else if (page === 'Обзор дня') setDaily(await api.dailyAnalytics())
+      else if (page === 'Аналитика') {
+        const [dailyReport, weeklyReport] = await Promise.all([api.dailyAnalytics(), api.weeklyAnalytics()])
+        setDaily(dailyReport)
+        setWeekly(weeklyReport)
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Не удалось загрузить данные')
     }
@@ -94,6 +99,8 @@ export default function ModulePanel({ page }: Props) {
     {page === 'Финансы' && <article className="panel module-panel"><div className="panel-title"><div><h3>Финансы</h3><p>Полный учёт личных расходов — следующий этап</p></div></div><p className="subtitle">Сейчас Personal OS отдельно хранит начисления за проведённые занятия и реальные платежи. В этом разделе позже появятся импорт банковских выписок, категории расходов и анализ регулярных трат.</p></article>}
 
     {page === 'Планировщик' && <article className="panel module-panel"><div className="panel-title"><div><h3>Календарь</h3><p>Сначала подключи Google Calendar, затем синхронизируй события.</p></div></div><button className="primary" onClick={async () => { try { const response = await api.connectGoogleCalendar(); window.location.assign(response.authorization_url) } catch (caught) { setError(caught instanceof Error ? caught.message : 'Не удалось начать подключение') } }}>Подключить Google Calendar <ArrowRight size={15}/></button></article>}
+
+    {page === 'Аналитика' && <><div className="module-stats"><article className="stat"><div className="stat-top"><span>Результаты за неделю</span><i className="violet"><CheckCircle2 size={16}/></i></div><div className="stat-number">{weekly?.completed_outcomes ?? '—'}</div><div className="stat-foot"><span>Задачи, учёба, проекты и занятия</span></div></article><article className="stat"><div className="stat-top"><span>Фактическое время</span><i className="blue"><Clock3 size={16}/></i></div><div className="stat-number">{weekly ? `${Math.floor(weekly.tracked_seconds / 3600)} ч ${Math.floor((weekly.tracked_seconds % 3600) / 60)} мин` : '—'}</div><div className="stat-foot"><span>За ${weekly?.week_start ?? 'текущую неделю'}</span></div></article></div><article className="panel module-panel"><div className="panel-title"><div><h3>Что получилось сегодня</h3><p>{daily?.day ?? 'Загрузка отчёта…'}</p></div></div><div className="module-list"><div className="module-row"><b>Завершённые задачи</b><strong>{daily?.completed_tasks ?? '—'}</strong></div><div className="module-row"><b>Учебные результаты</b><strong>{daily?.completed_academic_items ?? '—'}</strong></div><div className="module-row"><b>Результаты проектов</b><strong>{daily?.completed_project_milestones ?? '—'}</strong></div><div className="module-row"><b>Проведённые занятия</b><strong>{daily?.completed_lessons ?? '—'}</strong></div><div className="module-row"><b>Просроченные задачи</b><strong>{daily?.overdue_tasks ?? '—'}</strong></div></div></article><article className="panel module-panel"><div className="panel-title"><div><h3>Рекомендации</h3><p>Основаны на сохранённых фактах, без выдуманных данных</p></div></div><ul className="recommendations">{(weekly?.recommendations ?? []).map((item, index) => <li key={index}>{item}</li>)}{!weekly?.recommendations.length && <li>Нет рекомендаций для отображения.</li>}</ul></article></>}
 
     {page === 'Задачи' && <article className="panel module-panel"><div className="panel-title"><div><h3>Список задач</h3><p>Создавай и закрывай задачи на обзоре дня</p></div></div><p className="subtitle">Список задач сохраняется в базе. Перейди в «Обзор дня», чтобы добавить задачу или изменить статус.</p></article>}
     {page === 'Обзор дня' && daily && <article className="panel module-panel"><div className="panel-title"><div><h3>Итоги дня</h3><p>{daily.day}</p></div></div><div className="module-list"><div className="module-row"><b>Задачи выполнены</b><strong>{daily.completed_tasks}</strong></div><div className="module-row"><b>Учебные результаты</b><strong>{daily.completed_academic_items}</strong></div><div className="module-row"><b>Занятия</b><strong>{daily.completed_lessons}</strong></div></div></article>}
