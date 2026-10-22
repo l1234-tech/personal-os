@@ -4,7 +4,7 @@ import AuthScreen from './AuthScreen'
 import { api, ApiError, type ApiTask, type TaskPriority, type TimeEntry, type TimerState, type User } from './api'
 
 const groups = [
-  { title: 'РАБОЧЕЕ ПРОСТРАНСТВО', items: [{ label: 'Обзор дня', icon: LayoutDashboard }, { label: 'Планировщик', icon: CalendarDays }, { label: 'Задачи', icon: ListTodo }, { label: 'Фокус и время', icon: Timer }, { label: 'Аналитика', icon: ChartNoAxesCombined }] },
+  { title: 'РАБОЧЕЕ ПРОСТРАНСТВО', items: [{ label: 'Обзор дня', icon: LayoutDashboard }, { label: 'Планировщик', icon: CalendarDays }, { label: 'Задачи', icon: ListTodo }, { label: 'Фокус и время', icon: Timer }, { label: 'Аналитика', icon: BarChart3 }] },
   { title: 'НАПРАВЛЕНИЯ', items: [{ label: 'Учёба', icon: GraduationCap }, { label: 'ML и проекты', icon: Compass }, { label: 'Репетиторство', icon: UsersRound }, { label: 'Финансы', icon: Wallet }] },
 ]
 const areaColors: Record<string, string> = { itmo: 'violet', study: 'violet', education: 'violet', ml: 'blue', project: 'blue', tutoring: 'amber', personal: 'violet' }
@@ -36,6 +36,8 @@ export default function App() {
   const [authResolved, setAuthResolved] = useState(false)
   const [tasks, setTasks] = useState<ApiTask[]>([])
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)
+  const [usingCachedData, setUsingCachedData] = useState(false)
   const [manualCategory, setManualCategory] = useState('study')
   const [selectedTaskId, setSelectedTaskId] = useState('')
   const [manualNotes, setManualNotes] = useState('')
@@ -72,6 +74,12 @@ export default function App() {
       setTimer(loadedTimer)
       setTimeEntries(loadedEntries)
       setSeconds(loadedTimer?.elapsed_seconds ?? 0)
+      const syncedAt = new Date().toISOString()
+      setLastSyncedAt(syncedAt)
+      setUsingCachedData(false)
+      try {
+        window.localStorage.setItem('personal-os-read-cache-v1', JSON.stringify({ saved_at: syncedAt, tasks: loadedTasks, time_entries: loadedEntries }))
+      } catch { /* The app still works when browser storage is unavailable. */ }
       setNotice('')
     } catch (error) {
       setNotice(apiMessage(error))
@@ -100,7 +108,22 @@ export default function App() {
       window.removeEventListener('offline', offlineHandler)
     }
   }, [])
-  useEffect(() => { if (user) void refreshWorkspace() }, [user, refreshWorkspace])
+  useEffect(() => {
+    if (!user) return
+    try {
+      const raw = window.localStorage.getItem('personal-os-read-cache-v1')
+      if (raw) {
+        const cached = JSON.parse(raw) as { saved_at?: string; tasks?: ApiTask[]; time_entries?: TimeEntry[] }
+        if (Array.isArray(cached.tasks) && Array.isArray(cached.time_entries) && typeof cached.saved_at === 'string') {
+          setTasks(cached.tasks)
+          setTimeEntries(cached.time_entries)
+          setLastSyncedAt(cached.saved_at)
+          setUsingCachedData(true)
+        }
+      }
+    } catch { /* Ignore malformed or unavailable cache and load from the API. */ }
+    void refreshWorkspace()
+  }, [user, refreshWorkspace])
   useEffect(() => {
     if (!timer || timer.status !== 'running') return
     const startedAt = Date.now()
@@ -246,7 +269,7 @@ export default function App() {
   }
   async function logout() {
     try { await api.logout() } catch { /* Session may already be expired. */ }
-    setUser(null); setTasks([]); setTimeEntries([]); setTimer(null); setSeconds(0); setNotice('')
+    setUser(null); setTasks([]); setTimeEntries([]); setTimer(null); setSeconds(0); setLastSyncedAt(null); setUsingCachedData(false); setNotice(''); try { window.localStorage.removeItem('personal-os-read-cache-v1') } catch { /* Storage may be unavailable. */ }
   }
   if (!authResolved) return <div className="initial-loading"><span className="loading-mark"><Command size={22} /></span><p>Открываю личное пространство…</p></div>
   if (!user) return <AuthScreen onAuthenticated={setUser} />
@@ -255,13 +278,13 @@ export default function App() {
       <a className="brand" href="#home"><span className="brand-mark"><Command size={20}/></span><span><strong>personal<span>OS</span></strong><small>YOUR LIFE, IN SYNC</small></span></a>
       <button className="workspace"><span className="workspace-mark">P</span><span><b>Моё пространство</b><small>Personal workspace</small></span><ChevronDown size={15}/></button>
       <nav>{groups.map((group) => <div className="nav-group" key={group.title}><p>{group.title}</p>{group.items.map(({ label, icon: Icon }) => <button key={label} className={activePage === label ? 'nav-link active' : 'nav-link'} onClick={() => setActivePage(label)}><Icon size={17}/><span>{label}</span>{label === 'Задачи' && <em>{openTasks.length}</em>}</button>)}</div>)}</nav>
-      <div className="side-bottom"><div className="sync"><i className={online ? 'online-dot' : 'offline-dot'}/> <span><b>{online ? 'Подключение активно' : 'Нет сети'}</b><small>{loading ? 'Синхронизация…' : 'Данные из личного API'}</small></span></div><button className="nav-link" onClick={() => setActivePage('Настройки')}><Settings2 size={17}/><span>Настройки</span></button><div className="profile"><div>{user.email.slice(0, 1).toUpperCase()}</div><span><b>{user.email}</b><small>Личный аккаунт</small></span><button className="quiet logout-button" onClick={() => void logout()} title="Выйти" aria-label="Выйти"><LogOut size={15}/></button></div></div>
+      <div className="side-bottom"><div className="sync"><i className={online ? 'online-dot' : 'offline-dot'}/> <span><b>{online ? 'Подключение активно' : 'Нет сети'}</b><small>{loading ? 'Синхронизация…' : usingCachedData ? 'Кеш · только чтение' : lastSyncedAt ? `Синхр. ${new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date(lastSyncedAt))}` : 'Данные из личного API'}</small></span></div><button className="nav-link" onClick={() => setActivePage('Настройки')}><Settings2 size={17}/><span>Настройки</span></button><div className="profile"><div>{user.email.slice(0, 1).toUpperCase()}</div><span><b>{user.email}</b><small>Личный аккаунт</small></span><button className="quiet logout-button" onClick={() => void logout()} title="Выйти" aria-label="Выйти"><LogOut size={15}/></button></div></div>
     </aside>
     <main id="home" className="main">
       <header className="topbar"><div className="crumb"><span>Рабочее пространство</span><ArrowRight size={13}/><b>{activePage}</b></div><div className="top-actions"><label className="search"><Search size={15}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по задачам..."/><kbd>⌘ K</kbd></label><button className="icon-button" aria-label="Уведомления"><Bell size={18}/></button><div className="avatar">{user.email.slice(0, 1).toUpperCase()}</div></div></header>
       <div className="content">
         <section className="welcome"><div><p className="date">{dateLabel}</p><h1>Личное пространство <span>✳</span></h1><p className="subtitle">Планы становятся результатами. Сегодня — только реальные данные.</p></div><button className="primary" onClick={() => setComposer(true)}><Plus size={17}/> Новая задача</button></section>
-        {!online && <div className="notice offline-notice"><AlertCircle size={16}/> Нет соединения. Изменения не сохраняются офлайн; дождись сети и повтори действие.</div>}
+        {!online && <div className="notice offline-notice"><AlertCircle size={16}/><span>Нет соединения. {usingCachedData ? 'Показаны последние сохранённые задачи и записи времени в режиме чтения.' : 'Дождись сети и повтори действие.'} {lastSyncedAt ? `Последняя синхронизация: ${new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(lastSyncedAt))}.` : 'Нет сохранённой копии.'}</span></div>}
         {notice && <div className="notice" role="status"><AlertCircle size={16}/><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Закрыть сообщение">×</button></div>}
         {activePage === 'Аналитика' ? <section className="analytics-page">
           <div className="welcome"><div><p className="date">ФАКТИЧЕСКИЕ РЕЗУЛЬТАТЫ</p><h1>Аналитика времени</h1><p className="subtitle">Смотри, куда уходит время, без выдуманных данных и оценок продуктивности по часам.</p></div><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить</button></div>
