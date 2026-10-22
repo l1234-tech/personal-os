@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { ArrowRight, Bell, BookOpen, CalendarDays, ChartNoAxesCombined, Check, ChevronDown, Clock3, Command, Compass, GraduationCap, LayoutDashboard, ListTodo, LogOut, Plus, Search, Settings2, Sparkles, Timer, UsersRound, Wallet, Zap, AlertCircle, RefreshCw } from 'lucide-react'
+import { ArrowRight, Bell, BookOpen, CalendarDays, BarChart3, Check, ChevronDown, Clock3, Command, Compass, GraduationCap, LayoutDashboard, ListTodo, LogOut, Plus, Search, Settings2, Sparkles, Timer, UsersRound, Wallet, Zap, AlertCircle, RefreshCw } from 'lucide-react'
 import AuthScreen from './AuthScreen'
 import { api, ApiError, type ApiTask, type TaskPriority, type TimeEntry, type TimerState, type User } from './api'
 
@@ -136,12 +136,11 @@ export default function App() {
     timeEntries.forEach((entry) => categoryMap.set(entry.category, (categoryMap.get(entry.category) ?? 0) + entry.duration_seconds))
     const categories = Array.from(categoryMap, ([name, seconds]) => ({ name, seconds })).sort((a, b) => b.seconds - a.seconds)
     const weekSeconds = days.reduce((sum, day) => sum + day.seconds, 0)
-    const todayKey = days[days.length - 1]?.key
     const todaySeconds = days[days.length - 1]?.seconds ?? 0
     const weekEntries = days.reduce((sum, day) => sum + day.count, 0)
     const maxDaySeconds = Math.max(1, ...days.map((day) => day.seconds))
     const maxCategorySeconds = Math.max(1, ...categories.map((item) => item.seconds))
-    return { days, categories, weekSeconds, todaySeconds, weekEntries, maxDaySeconds, maxCategorySeconds, todayKey }
+    return { days, categories, weekSeconds, todaySeconds, weekEntries, maxDaySeconds, maxCategorySeconds }
   }, [timeEntries])
   async function addTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -286,7 +285,7 @@ export default function App() {
             <div className="analytics-task-stats"><div><span>Задач всего</span><b>{tasks.length}</b></div><div><span>Завершено</span><b>{done}</b></div><div><span>Доля завершённых</span><b>{tasks.length ? Math.round(done / tasks.length * 100) : 0}%</b></div><div><span>С оценкой времени</span><b>{tasks.filter((task) => task.estimated_minutes !== null).length}</b></div></div>
             <p className="analytics-footnote">Время считается по сохранённым записям. Это не оценка качества работы: для содержательного отчёта позже добавим цели, milestones и дневные результаты.</p>
           </article>
-        </section> : {activePage === 'Настройки' ? <section className="panel module-placeholder"><div className="module-icon"><Settings2 size={20}/></div><p className="date-label">АККАУНТ</p><h1>Настройки пространства</h1><p>Ты вошёл как <b>{user.email}</b>. Сейчас доступна базовая сессия; настройки интеграций и уведомлений будут подключены отдельными этапами.</p><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить данные</button></section> : activePage === 'Фокус и время' ? <section className="time-page">
+        </section> : activePage === 'Настройки' ? <section className="panel module-placeholder"><div className="module-icon"><Settings2 size={20}/></div><p className="date-label">АККАУНТ</p><h1>Настройки пространства</h1><p>Ты вошёл как <b>{user.email}</b>. Сейчас доступна базовая сессия; настройки интеграций и уведомлений будут подключены отдельными этапами.</p><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить данные</button></section> : activePage === 'Фокус и время' ? <section className="time-page">
           <div className="welcome"><div><p className="date">УЧЁТ ФАКТИЧЕСКОЙ РАБОТЫ</p><h1>Фокус и время</h1><p className="subtitle">Записывай время по факту и сравнивай его с оценками задач.</p></div><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить</button></div>
           <div className="time-summary">
             <article className="panel"><span>Записей времени</span><strong>{timeEntries.length}</strong></article>
