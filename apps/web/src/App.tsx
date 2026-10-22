@@ -78,7 +78,7 @@ export default function App() {
       setLastSyncedAt(syncedAt)
       setUsingCachedData(false)
       try {
-        window.localStorage.setItem('personal-os-read-cache-v1', JSON.stringify({ saved_at: syncedAt, tasks: loadedTasks, time_entries: loadedEntries }))
+        window.localStorage.setItem('personal-os-read-cache-v1', JSON.stringify({ owner_id: user?.id, saved_at: syncedAt, tasks: loadedTasks, time_entries: loadedEntries }))
       } catch { /* The app still works when browser storage is unavailable. */ }
       setNotice('')
     } catch (error) {
@@ -113,8 +113,8 @@ export default function App() {
     try {
       const raw = window.localStorage.getItem('personal-os-read-cache-v1')
       if (raw) {
-        const cached = JSON.parse(raw) as { saved_at?: string; tasks?: ApiTask[]; time_entries?: TimeEntry[] }
-        if (Array.isArray(cached.tasks) && Array.isArray(cached.time_entries) && typeof cached.saved_at === 'string') {
+        const cached = JSON.parse(raw) as { owner_id?: string; saved_at?: string; tasks?: ApiTask[]; time_entries?: TimeEntry[] }
+        if (cached.owner_id === user.id && Array.isArray(cached.tasks) && Array.isArray(cached.time_entries) && typeof cached.saved_at === 'string') {
           setTasks(cached.tasks)
           setTimeEntries(cached.time_entries)
           setLastSyncedAt(cached.saved_at)
