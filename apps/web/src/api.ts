@@ -36,6 +36,18 @@ export type ApiTask = {
 export type Student = { id: string; name: string; subject: string; rate_amount: string; currency_code: string; status: string }
 export type Subject = { id: string; name: string; semester: string; status: string; notes: string | null }
 export type Project = { id: string; name: string; description: string | null; project_type: string; status: string; goal: string | null }
+export type WeeklyAnalytics = {
+  week_start: string
+  week_end: string
+  completed_outcomes: number
+  completed_tasks: number
+  completed_academic_items: number
+  completed_project_milestones: number
+  completed_lessons: number
+  tracked_seconds: number
+  time_by_category: { category: string; seconds: number }[]
+  recommendations: string[]
+}
 export type DailyAnalytics = {
   day: string
   completed_tasks: number
@@ -159,7 +171,7 @@ export const api = {
   createProject: (payload: { name: string; project_type: string }) =>
     request<Project>("/projects", { method: "POST", body: JSON.stringify(payload) }),
   dailyAnalytics: () => request<DailyAnalytics>("/analytics/daily"),
-  weeklyAnalytics: () => request<Record<string, unknown>>("/analytics/weekly"),
+  weeklyAnalytics: () => request<WeeklyAnalytics>("/analytics/weekly"),
   startTimer: (category: string, taskId?: string) =>
     request<TimerState>("/timer/start", {
       method: "POST",
