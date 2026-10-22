@@ -10,6 +10,7 @@ from app.api.dependencies import get_current_user
 from app.db import get_db
 from app.models import User
 from app.models_tasks import Task, TimeEntry, TimerSession
+from app.models_tutoring import Student
 from app.task_schemas import TimerRead, TimerStart
 
 router = APIRouter(prefix="/timer", tags=["time tracking"])
@@ -34,6 +35,7 @@ def to_timer_read(session: TimerSession, now: datetime | None = None) -> TimerRe
     return TimerRead(
         id=session.id,
         task_id=session.task_id,
+        student_id=session.student_id,
         category=session.category,
         started_at=session.started_at,
         status=session.status,
@@ -48,6 +50,14 @@ def validate_task_owner(db: Session, user_id: UUID, task_id: UUID | None) -> Non
     task = db.scalar(select(Task.id).where(Task.id == task_id, Task.user_id == user_id))
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+
+
+def validate_student_owner(db: Session, user_id: UUID, student_id: UUID | None) -> None:
+    if student_id is None:
+        return
+    student = db.scalar(select(Student.id).where(Student.id == student_id, Student.user_id == user_id))
+    if student is None:
+        raise HTTPException(status_code=404, detail="Student not found")
 
 
 @router.get("/current", response_model=TimerRead | None)
@@ -68,10 +78,12 @@ def start_timer(
     if get_active_session(db, user.id) is not None:
         raise HTTPException(status_code=409, detail="A timer is already active")
     validate_task_owner(db, user.id, payload.task_id)
+    validate_student_owner(db, user.id, payload.student_id)
     now = datetime.now(UTC)
     session = TimerSession(
         user_id=user.id,
         task_id=payload.task_id,
+        student_id=payload.student_id,
         category=payload.category,
         started_at=now,
         last_resumed_at=now,
@@ -138,6 +150,7 @@ def stop_timer(
     entry = TimeEntry(
         user_id=user.id,
         task_id=session.task_id,
+        student_id=session.student_id,
         category=session.category,
         notes=None,
         started_at=session.started_at,

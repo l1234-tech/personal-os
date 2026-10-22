@@ -90,6 +90,12 @@ class TimeEntry(Base):
         nullable=True,
         index=True,
     )
+    student_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("students.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     category: Mapped[str] = mapped_column(String(64), nullable=False, default="personal")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -129,6 +135,12 @@ class TimerSession(Base):
     task_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("tasks.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    student_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("students.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
