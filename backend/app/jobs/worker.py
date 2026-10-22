@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.config import settings
 from app.db import SessionLocal
-from app.models_jobs import BackgroundJob, Notification, OutboxEvent
+from app.models_jobs import BackgroundJob, Notification
 from app.models_notifications import TelegramAccount, TelegramLinkToken
 from app.models_tasks import Task
 from app.models_tutoring import Lesson
