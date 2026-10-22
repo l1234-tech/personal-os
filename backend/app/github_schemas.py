@@ -1,9 +1,18 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class GitHubRepositoryLink(BaseModel):
     repository_id: int = Field(gt=0)
     full_name: str = Field(min_length=3, max_length=300)
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, value: str) -> str:
+        value = value.strip()
+        parts = value.split("/")
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            raise ValueError("Repository name must have the form owner/repository")
+        return value
 
 
 class GitHubRepositorySummary(BaseModel):
