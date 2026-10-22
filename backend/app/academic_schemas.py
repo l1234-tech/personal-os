@@ -7,7 +7,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 ItemType = Literal["lab", "homework", "exam", "test", "project", "other"]
 ItemStatus = Literal["todo", "in_progress", "submitted", "completed", "cancelled"]
 ProjectType = Literal["ml", "software", "study", "personal", "other"]
-ProjectStatus = Literal["idea", "research", "development", "testing", "completed", "paused", "archived"]
+ProjectStatus = Literal[
+    "idea", "research", "development", "testing", "completed", "paused", "archived"
+]
 StageStatus = Literal["not_started", "in_progress", "completed", "blocked"]
 MilestoneStatus = Literal["todo", "in_progress", "completed", "cancelled"]
 MasteryStatus = Literal["not_started", "learning", "practicing", "mastered"]
