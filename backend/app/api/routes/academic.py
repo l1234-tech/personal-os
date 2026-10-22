@@ -271,6 +271,11 @@ def update_academic_item(
             raise HTTPException(status_code=422, detail="Item title cannot be blank")
     if changes.get("resource_url"):
         changes["resource_url"] = validate_http_url(changes["resource_url"])
+    if "status" in changes:
+        if changes["status"] == "completed" and item.status != "completed":
+            item.completed_at = datetime.now(UTC)
+        elif changes["status"] != "completed":
+            item.completed_at = None
     for key, value in changes.items():
         setattr(item, key, value)
     db.commit()
@@ -457,6 +462,11 @@ def update_project_milestone(
         changes["title"] = changes["title"].strip()
         if not changes["title"]:
             raise HTTPException(status_code=422, detail="Milestone title cannot be blank")
+    if "status" in changes:
+        if changes["status"] == "completed" and milestone.status != "completed":
+            milestone.completed_at = datetime.now(UTC)
+        elif changes["status"] != "completed":
+            milestone.completed_at = None
     for key, value in changes.items():
         setattr(milestone, key, value)
     db.commit()
