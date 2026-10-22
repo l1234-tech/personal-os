@@ -99,7 +99,12 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=16), nullable=False, server_default="running"),
         sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("time_entry_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
         sa.CheckConstraint(
             "status IN ('running', 'paused', 'stopped')", name="ck_timer_sessions_status"
         ),
