@@ -119,6 +119,7 @@ class TimeEntryRead(BaseModel):
 class TimerStart(BaseModel):
     task_id: UUID | None = None
     student_id: UUID | None = None
+    project_id: UUID | None = None
     category: str = Field(default="personal", min_length=1, max_length=64)
 
 
@@ -126,6 +127,7 @@ class TimerRead(BaseModel):
     id: UUID
     task_id: UUID | None
     student_id: UUID | None
+    project_id: UUID | None
     category: str
     started_at: datetime
     status: Literal["running", "paused", "stopped"]
