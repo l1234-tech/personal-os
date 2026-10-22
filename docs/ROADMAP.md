@@ -12,10 +12,11 @@
 - [ ] CORS, rate limiting, request IDs, structured logs.
 
 ## Stage 2 — Tasks and time (feat/tasks-time-tracking)
-- [ ] CRUD задач/категорий/сроков.
-- [ ] Таймер с DB-инвариантом одной активной сессии на пользователя.
+- [x] CRUD задач/категорий/сроков (базовый API и клиентские операции создания/изменения статуса).
+- [x] Таймер с DB-инвариантом одной активной сессии на пользователя (start/pause/resume/stop).
 - [ ] Manual entries, корректировки, plan-vs-actual.
-- [ ] Dashboard, offline read-only cache и last-synced marker.
+- [x] Dashboard подключён к API: реальные задачи, состояние таймера, фильтрация, ошибки и сетевой индикатор.
+- [ ] Offline read-only cache и last-synced marker (отдельная доработка).
 
 ## Stage 3 — Calendar and planning (feat/calendar-planning)
 - [ ] Google OAuth, selected calendars, incremental cursor, duplicate protection.
