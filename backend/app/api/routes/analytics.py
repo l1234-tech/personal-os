@@ -1,5 +1,5 @@
-from collections import defaultdict
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -65,9 +65,12 @@ def time_totals(
 
 
 def money_totals(rows) -> list[MoneyTotal]:
-    totals: dict[str, object] = defaultdict(lambda: 0)
+    totals: dict[str, Decimal] = {}
     for row in rows:
-        totals[row.currency_code] += row.amount
+        amount = getattr(row, "amount", None)
+        if amount is None:
+            amount = row.price_amount
+        totals[row.currency_code] = totals.get(row.currency_code, Decimal("0.00")) + amount
     return [
         MoneyTotal(currency_code=currency, amount=amount)
         for currency, amount in sorted(totals.items())
