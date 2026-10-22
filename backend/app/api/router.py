@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.routes import (
     academic,
+    analytics,
     auth,
     health,
     integrations,
