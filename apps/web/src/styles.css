@@ -278,3 +278,90 @@ button:active:not(:disabled) { transform: translateY(1px); }
   .task-copy b { font-size: 14px; }
   .task-copy span, .schedule-row small { font-size: 12px; }
 }
+
+
+/* Calm neutral light theme: softer contrast, less visual glare */
+:root { --page:#f2f4f8; --surface:#fbfcfe; --surface-soft:#f6f8fc; --line:#dce2eb; --text:#293346; --muted:#667286; --accent:#6574b8; color:#293346; background:#f2f4f8; }
+body,.shell,.main { background:#f2f4f8; color:#293346; }
+.sidebar { background:#f9fafc; border-right-color:#dce2eb; box-shadow:none; }
+.brand-mark { background:linear-gradient(145deg,#7f8bc0,#59689f); border-color:#7a86b9; box-shadow:none; }
+.brand strong span { color:#6574b8; }
+.nav-link.active { color:#4d5b95; background:#e9edf7; box-shadow:inset 3px 0 #7180b7; }
+.nav-link:hover { background:#eef1f7; color:#394568; }
+.workspace { background:#f1f3f8; border-color:#dce2eb; }
+.workspace-mark,.profile>div,.avatar { background:#e6eaf4; color:#4e5d91; }
+.topbar { background:#f9fafceF; border-bottom-color:#dce2eb; backdrop-filter:blur(12px); }
+.search { background:#f1f3f8; border-color:#dce2eb; }
+.primary { background:#6574b8; border-color:#6574b8; box-shadow:none; color:white; }
+.primary:hover { background:#5867a8; }
+.secondary { background:#f7f8fb; color:#4e5d91; border-color:#d4dbe8; }
+.welcome h1 { color:#293346; }
+.welcome h1 span { color:#7784b8; }
+.subtitle { color:#667286; }
+.focus-card { background:linear-gradient(125deg,#e7eaf5,#eef1f8 58%,#e5eaf4); border-color:#d6ddec; }
+.orb { border-color:#7f8cb71a; }
+.focus-copy h2 { color:#293346; }
+.focus-copy>p,.timer-label { color:#66718d; }
+.focus-copy>span,.focus-bottom small { color:#5e6a80; }
+.focus-bottom>b { color:#465582; }
+.pill { background:#e1e6f4; border-color:#d0d8eb; color:#4f5f99; }
+.round-arrow { color:#53639c; background:#f9faff; border-color:#d3daeb; }
+.timer-card,.stat,.panel { background:#fbfcfe; border-color:#dce2eb; box-shadow:0 2px 8px #293a5807; }
+.timer-icon { background:#e8ecf7; color:#5d6da7; }
+.timer-value { color:#293346; }
+.stat-top { color:#5e6b81; }
+.stat-top .violet { color:#6978b3; background:#e9ecf7; }
+.stat-top .blue { color:#5d83ae; background:#e8f0f8; }
+.stat-top .amber { color:#a88654; background:#f5efe5; }
+.tags span { color:#596797; background:#edf0f8; border-color:#dfe4f0; }
+.panel-title h3 { color:#2e394d; }
+.panel-title p { color:#68758a; }
+.task-row { border-top-color:#e8ecf2; }
+.check.checked { background:#6877b5; border-color:#6877b5; }
+.marker.violet { background:#8793c3; }
+.marker.blue { background:#7a9dbb; }
+.marker.amber { background:#c3a274; }
+.task-copy b { color:#303b4f; }
+.task-copy span,.duration { color:#6c788b; }
+.add-link,.link-button { color:#5869a6; }
+.add-link { border-top-color:#e8ecf2; }
+.composer { background:#f6f8fc; border-color:#e0e5ef; }
+.composer input,.composer select { background:#fbfcfe; border-color:#d8dfeb; color:#293346; }
+.task-filters button.selected { color:#4e5f9a; background:#e9edf7; border-color:#d7deef; }
+.schedule-row b { color:#303b4f; }
+.schedule-row time,.schedule-row small,.schedule-row>span { color:#6c788b; }
+.schedule-row .s-violet { background:#8793c3; box-shadow:0 0 0 4px #8793c31c; }
+.schedule-row .s-blue { background:#7a9dbb; box-shadow:0 0 0 4px #7a9dbb1c; }
+.schedule-row .s-amber { background:#c3a274; box-shadow:0 0 0 4px #c3a2741c; }
+.progress { background:#e5e9f1; }
+.progress span { background:linear-gradient(90deg,#8793c3,#6574b8); }
+.auth-shell { background:radial-gradient(ellipse at 50% 20%,#e7eaf3 0,transparent 45%),#f2f4f8; }
+.auth-card { background:#fbfcfeF2; box-shadow:0 20px 60px #293a580d; }
+.auth-brand-icon { background:linear-gradient(145deg,#7f8bc0,#59689f); border-color:#7a86b9; }
+.auth-intro h1 { color:#293346; }
+.auth-kicker,.auth-switch button { color:#5969a5; }
+.auth-submit { background:#6574b8; border-color:#6574b8; }
+.auth-form input:focus { border-color:#7d8abe; box-shadow:0 0 0 3px #7d8abe19; }
+.module-icon,.calendar-empty-icon { background:#e9edf7; color:#5969a5; border-color:#d8dfef; }
+.global-toast { background:#34405a; border-color:#495875; }
+.notice { background:#eef2f9; border-color:#dce3ef; color:#3f4b61; }
+@media(prefers-color-scheme:dark) { /* This workspace intentionally keeps its chosen calm light palette. */ }
+
+
+/* Focused workspaces for planner and life areas */
+.area-page { display:grid; gap:18px; padding:22px; min-width:0; }
+.area-page .welcome { margin-bottom:0; }
+.area-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.area-summary .panel { display:grid; gap:8px; padding:18px; }
+.area-summary .panel span { color:#667286; font-size:13px; }
+.area-summary .panel strong { color:#293346; font:700 28px Manrope,sans-serif; }
+.area-tip { display:flex; align-items:flex-start; gap:12px; padding:18px; color:#5e6c88; }
+.area-tip>svg { color:#7885b5; flex-shrink:0; margin-top:2px; }
+.area-tip b { display:block; color:#34415a; font-size:14px; margin-bottom:6px; }
+.area-tip p { margin:0; color:#667286; font-size:13px; line-height:1.7; }
+@media(max-width:700px) {
+ .area-page { padding:16px; }
+ .area-summary { grid-template-columns:1fr; gap:8px; }
+ .area-summary .panel { padding:13px; }
+ .area-summary .panel strong { font-size:24px; }
+}

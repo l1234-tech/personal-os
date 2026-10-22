@@ -146,6 +146,15 @@ export default function App() {
   const dateLabel = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
   const timeLabel = formatClock(seconds)
   const openTasks = tasks.filter((task) => task.status !== 'done' && task.status !== 'cancelled')
+  const pageScope = activePage === 'Учёба' ? { title: 'Учёба', terms: ['itmo', 'study', 'учёб', 'учеб', 'университет'] }
+    : activePage === 'ML и проекты' ? { title: 'ML и проекты', terms: ['ml', 'ds', 'project', 'проект', 'код', 'разработ'] }
+    : activePage === 'Репетиторство' ? { title: 'Репетиторство', terms: ['tutoring', 'репет', 'ученик', 'занят'] }
+    : activePage === 'Финансы' ? { title: 'Финансы', terms: ['finance', 'финанс', 'бюджет', 'деньг'] }
+    : null
+  const scopedTasks = pageScope ? tasks.filter((task) => {
+    const haystack = `${task.category} ${task.title} ${task.description ?? ''}`.toLowerCase()
+    return pageScope.terms.some((term) => haystack.includes(term))
+  }) : tasks
   const analytics = useMemo(() => {
     const today = new Date()
     const days = Array.from({ length: 7 }, (_, index) => {
@@ -312,6 +321,22 @@ export default function App() {
             <div className="analytics-task-stats"><div><span>Задач всего</span><b>{tasks.length}</b></div><div><span>Завершено</span><b>{done}</b></div><div><span>Доля завершённых</span><b>{tasks.length ? Math.round(done / tasks.length * 100) : 0}%</b></div><div><span>С оценкой времени</span><b>{tasks.filter((task) => task.estimated_minutes !== null).length}</b></div></div>
             <p className="analytics-footnote">Время считается по сохранённым записям. Это не оценка качества работы: для содержательного отчёта позже добавим цели, milestones и дневные результаты.</p>
           </article>
+        </section> : pageScope ? <section className="area-page">
+          <div className="welcome"><div><p className="date">НАПРАВЛЕНИЕ</p><h1>{pageScope.title}</h1><p className="subtitle">Задачи этого направления, найденные по категории, названию и описанию.</p></div><button className="primary" onClick={() => { setCategory(activePage === 'Учёба' ? 'itmo' : activePage === 'ML и проекты' ? 'ml' : activePage === 'Репетиторство' ? 'tutoring' : 'personal'); setComposer(true); setActivePage('Задачи') }}><Plus size={17}/> Новая задача</button></div>
+          <div className="area-summary">
+            <article className="panel"><span>Всего задач</span><strong>{scopedTasks.length}</strong></article>
+            <article className="panel"><span>В работе</span><strong>{scopedTasks.filter((task) => task.status !== 'done' && task.status !== 'cancelled').length}</strong></article>
+            <article className="panel"><span>Завершено</span><strong>{scopedTasks.filter((task) => task.status === 'done').length}</strong></article>
+          </div>
+          <article className="panel"><div className="panel-title"><div><h3>Список задач</h3><p>Отметь выполнение или создай задачу с нужной категорией.</p></div><button className="link-button" onClick={() => setActivePage('Задачи')}>Все задачи <ArrowRight size={14}/></button></div>
+            <div className="task-list">{scopedTasks.map((task) => <div className={'task-row ' + (task.status === 'done' ? 'is-done' : '')} key={task.id}><button className={'check ' + (task.status === 'done' ? 'checked' : '')} aria-label={task.status === 'done' ? 'Вернуть в работу' : 'Отметить выполненной'} disabled={!online} onClick={() => void toggleTask(task)}>{task.status === 'done' && <Check size={13}/>}</button><div className={'marker ' + categoryColor(task.category)}/><div className="task-copy"><b>{task.title}</b><span>{task.category} · {task.priority === 'urgent' ? 'срочно' : task.priority === 'high' ? 'высокий приоритет' : task.priority === 'low' ? 'низкий приоритет' : 'обычный приоритет'}</span></div><span className="duration">{formatDuration(task.estimated_minutes)}</span></div>)}{!scopedTasks.length && <div className="empty"><ListTodo size={20}/><b>В этом направлении пока нет найденных задач</b><span>Создай задачу с подходящей категорией или названием — она появится здесь автоматически.</span></div>}</div>
+          </article>
+          <article className="panel area-tip"><Sparkles size={18}/><div><b>Как пользоваться направлением</b><p>Создавай задачи с категориями «ITMO / Учёба», «ML / DS», «Репетиторство» или указывай ключевые слова в названии. Общий список и аналитика используют те же записи, поэтому дублировать задачи не нужно.</p></div></article>
+        </section> : activePage === 'Планировщик' ? <section className="area-page">
+          <div className="welcome"><div><p className="date">ПЛАНИРОВАНИЕ</p><h1>Планировщик</h1><p className="subtitle">Сначала сроки и приоритеты, затем календарные интеграции.</p></div><button className="secondary" onClick={() => setActivePage('Задачи')}><ListTodo size={16}/> Открыть задачи</button></div>
+          <div className="area-summary"><article className="panel"><span>Активные</span><strong>{openTasks.length}</strong></article><article className="panel"><span>Высокий приоритет</span><strong>{openTasks.filter((task) => task.priority === 'high' || task.priority === 'urgent').length}</strong></article><article className="panel"><span>С оценкой времени</span><strong>{openTasks.filter((task) => task.estimated_minutes !== null).length}</strong></article></div>
+          <article className="panel"><div className="panel-title"><div><h3>Следующие действия</h3><p>Список активных задач, отсортированный по приоритету.</p></div></div><div className="task-list">{[...openTasks].sort((a,b) => ({urgent:0,high:1,medium:2,low:3}[a.priority] - {urgent:0,high:1,medium:2,low:3}[b.priority])).map((task) => <div className="task-row" key={task.id}><div className={'marker ' + categoryColor(task.category)}/><div className="task-copy"><b>{task.title}</b><span>{task.category} · {task.priority === 'urgent' ? 'Срочно' : task.priority === 'high' ? 'Высокий приоритет' : task.priority === 'low' ? 'Низкий приоритет' : 'Обычный приоритет'}</span></div><span className="duration">{formatDuration(task.estimated_minutes)}</span><button className="quiet" onClick={() => void toggleTask(task)} disabled={!online}>Готово</button></div>)}{!openTasks.length && <div className="empty"><Check size={20}/><b>Активных задач нет</b><span>Добавь новую задачу, когда появится следующий шаг.</span></div>}</div></article>
+          <article className="panel area-tip"><CalendarDays size={18}/><div><b>Календарь — следующий этап</b><p>Сейчас здесь отображаются реальные задачи и их приоритеты. Внешние события пока не подключены, поэтому система не придумывает расписание. Следующим этапом добавим даты выполнения и календарные блоки.</p></div></article>
         </section> : activePage === 'Настройки' ? <section className="panel module-placeholder"><div className="module-icon"><Settings2 size={20}/></div><p className="date-label">АККАУНТ</p><h1>Настройки пространства</h1><p>Ты вошёл как <b>{user.email}</b>. Сейчас доступна базовая сессия; настройки интеграций и уведомлений будут подключены отдельными этапами.</p><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить данные</button></section> : activePage === 'Фокус и время' ? <section className="time-page">
           <div className="welcome"><div><p className="date">УЧЁТ ФАКТИЧЕСКОЙ РАБОТЫ</p><h1>Фокус и время</h1><p className="subtitle">Записывай время по факту и сравнивай его с оценками задач.</p></div><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить</button></div>
           <div className="time-summary">
