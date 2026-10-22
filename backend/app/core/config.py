@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     google_client_id: str | None = None
     google_client_secret: str | None = None
     google_redirect_uri: str | None = None
+    github_client_id: str | None = None
+    github_client_secret: str | None = None
+    github_redirect_uri: str | None = None
+    telegram_bot_token: str | None = None
+    telegram_bot_username: str | None = None
+    telegram_webhook_secret: str | None = None
     token_encryption_key: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
