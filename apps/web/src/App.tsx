@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { ArrowRight, Bell, BookOpen, CalendarDays, BarChart3, Check, ChevronDown, Clock3, Command, Compass, GraduationCap, LayoutDashboard, ListTodo, LogOut, Plus, Search, Settings2, Sparkles, Timer, UsersRound, Wallet, Zap, AlertCircle, RefreshCw } from 'lucide-react'
 import AuthScreen from './AuthScreen'
 import FinancePanel from './FinancePanel'
+import './finance.css'
 import { api, ApiError, type ApiTask, type TaskPriority, type TimeEntry, type TimerState, type User } from './api'
 
 const groups = [
