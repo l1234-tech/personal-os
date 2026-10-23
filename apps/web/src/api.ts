@@ -55,6 +55,24 @@ export type TimeEntry = {
   created_at: string
 }
 
+export type FinanceTransaction = {
+  id: string
+  kind: 'income' | 'expense'
+  amount: string
+  currency_code: string
+  category: string
+  description: string | null
+  occurred_at: string
+  created_at: string
+}
+export type FinanceSummary = {
+  currency_code: string
+  income: string
+  expenses: string
+  balance: string
+  transaction_count: number
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
   if (init.body && !headers.has("Content-Type")) {
@@ -115,6 +133,10 @@ export const api = {
   resumeTimer: () => request<TimerState>("/timer/resume", { method: "POST" }),
   stopTimer: () => request<TimerState>("/timer/stop", { method: "POST" }),
   timeEntries: () => request<TimeEntry[]>("/time-entries?limit=200"),
+  financeTransactions: () => request<FinanceTransaction[]>("/finance/transactions?limit=200"),
+  financeSummary: () => request<FinanceSummary[]>("/finance/summary"),
+  createFinanceTransaction: (payload: { kind: 'income' | 'expense'; amount: string; currency_code: string; category: string; description?: string; occurred_at: string }) => request<FinanceTransaction>("/finance/transactions", { method: "POST", body: JSON.stringify(payload) }),
+  deleteFinanceTransaction: (id: string) => request<void>(`/finance/transactions/${encodeURIComponent(id)}`, { method: "DELETE" }),
   createTimeEntry: (payload: { task_id?: string; category: string; notes?: string; started_at: string; ended_at: string; source?: "manual" | "calendar_adjustment" }) =>
     request<TimeEntry>("/time-entries", { method: "POST", body: JSON.stringify(payload) }),
   updateTimeEntry: (id: string, payload: Partial<Pick<TimeEntry, "task_id" | "category" | "notes" | "started_at" | "ended_at" | "duration_seconds">>) =>

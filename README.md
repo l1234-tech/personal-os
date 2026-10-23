@@ -23,7 +23,7 @@
 2. Выполните `docker compose up --build`.
 3. Web: http://localhost:5173; API: http://localhost:8000; Swagger: http://localhost:8000/docs; health: http://localhost:8000/api/v1/health.
 
-Документация: [ТЗ](docs/SPEC.md), [архитектура](docs/ARCHITECTURE.md), [модель данных](docs/DATA_MODEL.md), [безопасность](docs/SECURITY.md), [roadmap](docs/ROADMAP.md), [локальная разработка](docs/DEVELOPMENT.md).
+Документация: [руководство пользователя](docs/USER_GUIDE.md), [ТЗ](docs/SPEC.md), [архитектура](docs/ARCHITECTURE.md), [модель данных](docs/DATA_MODEL.md), [безопасность](docs/SECURITY.md), [roadmap](docs/ROADMAP.md), [локальная разработка](docs/DEVELOPMENT.md).
 
 > Это foundation-каркас: полноценные вход, приглашения, доменные CRUD-сценарии и интеграции ещё предстоит реализовать. Не используйте эту версию в production с реальными личными данными.
 
