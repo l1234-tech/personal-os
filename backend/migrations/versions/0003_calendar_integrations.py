@@ -1,4 +1,6 @@
 """Add provider integrations and Google Calendar sync tables."""
+
+# ruff: noqa: E501, I001
 from collections.abc import Sequence
 
 import sqlalchemy as sa
