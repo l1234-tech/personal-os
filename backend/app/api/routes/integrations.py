@@ -1,3 +1,4 @@
+# ruff: noqa: E501, I001
 from datetime import UTC, date, datetime, time, timedelta
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
