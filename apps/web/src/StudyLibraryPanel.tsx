@@ -37,7 +37,7 @@ export default function StudyLibraryPanel() {
     event.preventDefault()
     if (!draft.title.trim() || !safeTarget(draft.target.trim())) { setNotice('Укажи название и корректную ссылку или локальный путь.'); return }
     const next = editing ? items.map((item) => item.id === draft.id ? { ...draft, title:draft.title.trim(), target:draft.target.trim() } : item) : [{ ...draft, title:draft.title.trim(), target:draft.target.trim() }, ...items]
-    persist(next); setEditing(null); setNotice('Материал сохранён.')
+    persist(next); setEditing(null); setDraft({ id:'', title:'', type:'Материал', kind:'Сайт', subject:'Общее', student:'', target:'', notes:'', favorite:false }); setNotice('Материал сохранён.')
   }
   function editItem(item: LibraryItem) { if (item.id.startsWith('quick-')) return; setEditing(item); setDraft(item) }
   function removeItem(item: LibraryItem) { if (item.id.startsWith('quick-')) return; if (window.confirm(`Удалить «${item.title}»?`)) persist(items.filter((saved) => saved.id !== item.id)) }
