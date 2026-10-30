@@ -43,6 +43,12 @@ export type TimerState = {
   finished_at: string | null
 }
 
+
+export type Integration = { id: string; provider: string; external_account_id: string; status: string; scopes: string[]; connected_at: string; updated_at: string }
+export type GoogleCalendar = { id: string; summary: string; primary: boolean; access_role: string; selected: boolean }
+export type CalendarEvent = { id: string; calendar_id: string; external_event_id: string; title: string; description: string | null; start_at: string; end_at: string; all_day: boolean; status: string; html_link: string | null; external_updated_at: string | null; synced_at: string }
+export type CalendarSyncResult = { calendars_synced: number; events_seen: number; events_created_or_updated: number; synced_at: string }
+
 export type TimeEntry = {
   id: string
   task_id: string | null
@@ -117,6 +123,13 @@ export const api = {
   timeEntries: () => request<TimeEntry[]>("/time-entries?limit=200"),
   createTimeEntry: (payload: { task_id?: string; category: string; notes?: string; started_at: string; ended_at: string; source?: "manual" | "calendar_adjustment" }) =>
     request<TimeEntry>("/time-entries", { method: "POST", body: JSON.stringify(payload) }),
+  integrations: () => request<Integration[]>("/integrations"),
+  connectGoogle: () => request<{ authorization_url: string; expires_at: string }>("/integrations/google/connect", { method: "POST" }),
+  googleCalendars: () => request<GoogleCalendar[]>("/integrations/google/calendars"),
+  saveGoogleCalendars: (calendarIds: string[]) => request<GoogleCalendar[]>("/integrations/google/calendars", { method: "PUT", body: JSON.stringify({ calendar_ids: calendarIds }) }),
+  syncGoogle: () => request<CalendarSyncResult>("/integrations/google/sync", { method: "POST" }),
+  calendarEvents: (startAt: string, endAt: string) => request<CalendarEvent[]>(`/integrations/calendar/events?start_at=${encodeURIComponent(startAt)}&end_at=${encodeURIComponent(endAt)}`),
+  disconnectGoogle: () => request<void>("/integrations/google", { method: "DELETE" }),
   updateTimeEntry: (id: string, payload: Partial<Pick<TimeEntry, "task_id" | "category" | "notes" | "started_at" | "ended_at" | "duration_seconds">>) =>
     request<TimeEntry>(`/time-entries/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(payload) }),
 }
