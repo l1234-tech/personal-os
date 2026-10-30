@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ArrowRight, Bell, BookOpen, CalendarDays, BarChart3, Check, ChevronDown, Clock3, Command, Compass, GraduationCap, LayoutDashboard, ListTodo, LogOut, Plus, Search, Settings2, Sparkles, Timer, UsersRound, Wallet, Zap, AlertCircle, RefreshCw } from 'lucide-react'
 import AuthScreen from './AuthScreen'
+import GoogleCalendarPanel from './GoogleCalendarPanel'
+import StudyLibraryPanel from './StudyLibraryPanel'
 import { api, ApiError, type ApiTask, type TaskPriority, type TimeEntry, type TimerState, type User } from './api'
 
 const groups = [
   { title: 'РАБОЧЕЕ ПРОСТРАНСТВО', items: [{ label: 'Обзор дня', icon: LayoutDashboard }, { label: 'Планировщик', icon: CalendarDays }, { label: 'Задачи', icon: ListTodo }, { label: 'Фокус и время', icon: Timer }, { label: 'Аналитика', icon: BarChart3 }] },
   { title: 'НАПРАВЛЕНИЯ', items: [{ label: 'Учёба', icon: GraduationCap }, { label: 'ML и проекты', icon: Compass }, { label: 'Репетиторство', icon: UsersRound }, { label: 'Финансы', icon: Wallet }] },
+  { title: 'ИНСТРУМЕНТЫ', items: [{ label: 'Google Calendar', icon: CalendarDays }, { label: 'Библиотека', icon: BookOpen }] },
 ]
 const areaColors: Record<string, string> = { itmo: 'violet', study: 'violet', education: 'violet', ml: 'blue', project: 'blue', tutoring: 'amber', personal: 'violet' }
 function categoryColor(category: string) {
@@ -301,7 +304,7 @@ export default function App() {
         <section className="welcome"><div><p className="date">{dateLabel}</p><h1>Личное пространство <span>✳</span></h1><p className="subtitle">Планы становятся результатами. Сегодня — только реальные данные.</p></div><button className="primary" onClick={() => setComposer(true)}><Plus size={17}/> Новая задача</button></section>
         {!online && <div className="notice offline-notice"><AlertCircle size={16}/><span>Нет соединения. {usingCachedData ? 'Показаны последние сохранённые задачи и записи времени в режиме чтения.' : 'Дождись сети и повтори действие.'} {lastSyncedAt ? `Последняя синхронизация: ${new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(lastSyncedAt))}.` : 'Нет сохранённой копии.'}</span></div>}
         {notice && <div className="notice" role="status"><AlertCircle size={16}/><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Закрыть сообщение">×</button></div>}
-        {activePage === 'Аналитика' ? <section className="analytics-page">
+        {activePage === 'Google Calendar' ? <GoogleCalendarPanel /> : activePage === 'Библиотека' ? <StudyLibraryPanel /> : activePage === 'Аналитика' ? <section className="analytics-page">
           <div className="welcome"><div><p className="date">ФАКТИЧЕСКИЕ РЕЗУЛЬТАТЫ</p><h1>Аналитика времени</h1><p className="subtitle">Смотри, куда уходит время, без выдуманных данных и оценок продуктивности по часам.</p></div><button className="secondary" onClick={() => void refreshWorkspace()}><RefreshCw size={15}/> Обновить</button></div>
           <div className="time-summary">
             <article className="panel"><span>Сегодня</span><strong>{formatClock(analytics.todaySeconds)}</strong></article>
