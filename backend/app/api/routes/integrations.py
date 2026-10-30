@@ -595,8 +595,8 @@ def sync_google_calendars(
 
 @router.get("/calendar/events", response_model=list[CalendarEventRead])
 def list_calendar_events(
-    start_at: datetime = Query(...),
-    end_at: datetime = Query(...),
+    start_at: datetime = Query(...),  # noqa: B008
+    end_at: datetime = Query(...),  # noqa: B008
     limit: int = Query(default=200, ge=1, le=500),
     db: Session = Depends(get_db),  # noqa: B008
     user: User = Depends(get_current_user),  # noqa: B008
