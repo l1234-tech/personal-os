@@ -597,7 +597,7 @@ def sync_google_calendars(
 def list_calendar_events(
     start_at: datetime = Query(...),  # noqa: B008
     end_at: datetime = Query(...),  # noqa: B008
-    limit: int = Query(default=200, ge=1, le=500),
+    limit: int = Query(default=200, ge=1, le=500),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
     user: User = Depends(get_current_user),  # noqa: B008
 ) -> list[CalendarEvent]:
