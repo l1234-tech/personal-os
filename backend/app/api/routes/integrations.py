@@ -1,5 +1,4 @@
 from datetime import UTC, date, datetime, time, timedelta
-from urllib.parse import quote
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
