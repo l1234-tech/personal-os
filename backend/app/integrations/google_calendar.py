@@ -1,3 +1,4 @@
+# ruff: noqa: E501, I001
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import quote
