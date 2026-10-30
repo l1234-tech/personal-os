@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { BookOpen, ExternalLink, FileDown, FileUp, FolderOpen, Heart, Link2, Plus, Search, Trash2, X } from 'lucide-react'
 
 type LibraryItem = { id: string; title: string; type: string; kind: string; subject: string; student: string; target: string; notes: string; favorite?: boolean; created?: number }
@@ -33,7 +33,7 @@ export default function StudyLibraryPanel() {
   }).sort((a,b) => Number(Boolean(b.favorite))-Number(Boolean(a.favorite)) || (b.created ?? 0)-(a.created ?? 0)), [allItems, filter, favoritesOnly, query])
   function persist(next: LibraryItem[]) { setItems(next); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { setNotice('Не удалось сохранить данные браузера. Экспортируй резервную копию.') } }
   function openNew() { setEditing(null); setDraft({ id:crypto.randomUUID(), title:'', type:'Материал', kind:'Сайт', subject:'Общее', student:'', target:'', notes:'', favorite:false, created:Date.now() }) }
-  function saveItem(event: React.FormEvent<HTMLFormElement>) {
+  function saveItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!draft.title.trim() || !safeTarget(draft.target.trim())) { setNotice('Укажи название и корректную ссылку или локальный путь.'); return }
     const next = editing ? items.map((item) => item.id === draft.id ? { ...draft, title:draft.title.trim(), target:draft.target.trim() } : item) : [{ ...draft, title:draft.title.trim(), target:draft.target.trim() }, ...items]
