@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -13,7 +14,8 @@ from app.calendar_schemas import (
 )
 from app.db import get_db
 from app.models import User
-from app.models_integrations import PersonalCalendarEvent
+from app.models_integrations import CalendarSelection, Integration, PersonalCalendarEvent
+from app.integrations.google_calendar import GOOGLE_CALENDAR_API, calendar_events_url, get_access_token
 
 router = APIRouter(prefix="/calendar", tags=["personal calendar"])
 
@@ -109,3 +111,114 @@ def delete_event(
     db.delete(event)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/events/{event_id}/publish", response_model=PersonalCalendarEventRead)
+def publish_event_to_google(
+    event_id: UUID,
+    calendar_id: str = Query(..., min_length=1, max_length=1024),
+    db: Session = Depends(get_db),  # noqa: B008
+    user: User = Depends(get_current_user),  # noqa: B008
+) -> PersonalCalendarEvent:
+    """Explicitly publish or update one event in a selected writable Google calendar."""
+    event = _owned_event(db, user.id, event_id)
+    integration = db.scalar(
+        select(Integration).where(
+            Integration.user_id == user.id,
+            Integration.provider == "google_calendar",
+            Integration.status == "active",
+        )
+    )
+    if integration is None:
+        raise HTTPException(status_code=409, detail="Connect Google Calendar first")
+    selection = db.scalar(
+        select(CalendarSelection).where(
+            CalendarSelection.integration_id == integration.id,
+            CalendarSelection.calendar_id == calendar_id,
+            CalendarSelection.selected.is_(True),
+        )
+    )
+    if selection is None:
+        raise HTTPException(status_code=422, detail="Select this Google calendar before publishing")
+
+    access_token = get_access_token(db, integration)
+    auth_headers = {"Authorization": f"Bearer {access_token}"}
+    body = {
+        "summary": event.title,
+        "description": event.description or "",
+        "start": {"date": event.start_at.date().isoformat()} if event.all_day else {"dateTime": event.start_at.isoformat()},
+        "end": {"date": event.end_at.date().isoformat()} if event.all_day else {"dateTime": event.end_at.isoformat()},
+    }
+    try:
+        with httpx.Client(timeout=20.0) as client:
+            calendars_response = client.get(
+                f"{GOOGLE_CALENDAR_API}/users/me/calendarList",
+                headers=auth_headers,
+                params={"maxResults": "250"},
+            )
+            if calendars_response.status_code >= 400:
+                raise HTTPException(status_code=502, detail="Could not verify Google calendar permissions")
+            items = calendars_response.json().get("items", [])
+            remote_calendar = next(
+                (item for item in items if isinstance(item, dict) and item.get("id") == calendar_id),
+                None,
+            )
+            if remote_calendar is None or remote_calendar.get("accessRole") not in {"writer", "owner"}:
+                raise HTTPException(status_code=403, detail="This Google calendar is not writable")
+
+            url = calendar_events_url(calendar_id)
+            if event.google_event_id:
+                if event.google_calendar_id != calendar_id or not event.google_etag:
+                    event.sync_status = "conflict"
+                    db.commit()
+                    raise HTTPException(status_code=409, detail="Google link metadata is incomplete; review the event")
+                remote = client.get(f"{url}/{event.google_event_id}", headers=auth_headers)
+                if remote.status_code >= 400:
+                    raise HTTPException(status_code=502, detail="Could not verify the current Google event")
+                if remote.json().get("etag") != event.google_etag:
+                    event.sync_status = "conflict"
+                    db.commit()
+                    raise HTTPException(status_code=409, detail="Google event changed outside Personal OS; resolve the conflict")
+                response = client.patch(
+                    f"{url}/{event.google_event_id}",
+                    headers={**auth_headers, "Content-Type": "application/json", "If-Match": event.google_etag},
+                    json=body,
+                )
+            else:
+                response = client.post(
+                    url,
+                    headers={**auth_headers, "Content-Type": "application/json"},
+                    json=body,
+                )
+    except httpx.HTTPError as exc:
+        event.sync_status = "error"
+        db.commit()
+        raise HTTPException(status_code=502, detail="Google Calendar request failed; retry publishing") from exc
+
+    if response.status_code == 412:
+        event.sync_status = "conflict"
+        db.commit()
+        raise HTTPException(status_code=409, detail="Google event changed during publishing; resolve the conflict")
+    if response.status_code >= 400:
+        event.sync_status = "error"
+        db.commit()
+        raise HTTPException(status_code=502, detail="Google rejected the event change; retry publishing")
+    result = response.json()
+    if not isinstance(result.get("id"), str) or not isinstance(result.get("etag"), str):
+        event.sync_status = "error"
+        db.commit()
+        raise HTTPException(status_code=502, detail="Google returned incomplete event metadata")
+
+    event.google_calendar_id = calendar_id
+    event.google_event_id = result["id"]
+    event.google_etag = result["etag"]
+    updated = result.get("updated")
+    if isinstance(updated, str):
+        try:
+            event.google_updated_at = datetime.fromisoformat(updated.replace("Z", "+00:00")).astimezone(UTC)
+        except ValueError:
+            event.google_updated_at = None
+    event.sync_status = "synced"
+    db.commit()
+    db.refresh(event)
+    return event
