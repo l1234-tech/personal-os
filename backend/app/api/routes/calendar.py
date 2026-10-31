@@ -32,11 +32,11 @@ def _owned_event(db: Session, user_id: UUID, event_id: UUID) -> PersonalCalendar
 
 @router.get("/events", response_model=list[PersonalCalendarEventRead])
 def list_events(
-    start_at: datetime = Query(...),
-    end_at: datetime = Query(...),
+    start_at: datetime = Query(...),  # noqa: B008
+    end_at: datetime = Query(...),  # noqa: B008
     limit: int = Query(default=300, ge=1, le=1000),
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),  # noqa: B008
+    user: User = Depends(get_current_user),  # noqa: B008
 ) -> list[PersonalCalendarEvent]:
     if start_at.tzinfo is None or end_at.tzinfo is None or end_at <= start_at:
         raise HTTPException(status_code=422, detail="A valid timezone-aware interval is required")
@@ -54,7 +54,11 @@ def list_events(
     )
 
 
-@router.post("/events", response_model=PersonalCalendarEventRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/events",
+    response_model=PersonalCalendarEventRead,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_event(
     payload: PersonalCalendarEventCreate,
     db: Session = Depends(get_db),
