@@ -3,6 +3,7 @@ import { ArrowRight, Bell, BookOpen, CalendarDays, BarChart3, Check, ChevronDown
 import AuthScreen from './AuthScreen'
 import GoogleCalendarPanel from './GoogleCalendarPanel'
 import PersonalCalendarPanel from './PersonalCalendarPanel'
+import CalendarAgenda from './CalendarAgenda'
 import StudyLibraryPanel from './StudyLibraryPanel'
 import { api, ApiError, type ApiTask, type TaskPriority, type TimeEntry, type TimerState, type User } from './api'
 
@@ -302,6 +303,7 @@ export default function App() {
     <main id="home" className="main">
       <header className="topbar"><div className="crumb"><span>Рабочее пространство</span><ArrowRight size={13}/><b>{activePage}</b></div><div className="top-actions"><label className="search"><Search size={15}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по задачам..."/><kbd>⌘ K</kbd></label><button className="icon-button theme-toggle" onClick={() => setTheme((current) => current === "light" ? "dark" : "light")} aria-label={theme === "light" ? "Включить тёмную тему" : "Включить светлую тему"} title={theme === "light" ? "Тёмная тема" : "Светлая тема"}>{theme === "light" ? "☾" : "☀"}</button><button className="icon-button" aria-label="Уведомления"><Bell size={18}/></button><div className="avatar">{user.email.slice(0, 1).toUpperCase()}</div></div></header>
       <div className="content">
+        {activePage !== 'Планировщик' && <CalendarAgenda />}
         <section className="welcome"><div><p className="date">{dateLabel}</p><h1>Личное пространство <span>✳</span></h1><p className="subtitle">Планы становятся результатами. Сегодня — только реальные данные.</p></div><button className="primary" onClick={() => setComposer(true)}><Plus size={17}/> Новая задача</button></section>
         {!online && <div className="notice offline-notice"><AlertCircle size={16}/><span>Нет соединения. {usingCachedData ? 'Показаны последние сохранённые задачи и записи времени в режиме чтения.' : 'Дождись сети и повтори действие.'} {lastSyncedAt ? `Последняя синхронизация: ${new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(lastSyncedAt))}.` : 'Нет сохранённой копии.'}</span></div>}
         {notice && <div className="notice" role="status"><AlertCircle size={16}/><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Закрыть сообщение">×</button></div>}
