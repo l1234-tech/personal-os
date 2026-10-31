@@ -485,3 +485,28 @@ button, input, select, textarea { font-family: inherit; }
 .calendar-deadline-line span { position:absolute; right:3px; top:-13px; padding:1px 3px; border-radius:3px; background:var(--surface); color:#9b7945; font-size:8px; }
 .calendar-deadline-line b { position:absolute; left:3px; top:2px; max-width:calc(100% - 6px); overflow:hidden; padding:2px 4px; border-radius:3px; background:#f6eee0; color:#8d7042; font-size:8px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
 :root[data-theme='dark'] .calendar-task-deadline,:root[data-theme='dark'] .calendar-deadline-line b { background:#443a2b; color:#e2c99e; }
+
+
+.calendar-event-resize-handle {
+  position:absolute;
+  z-index:4;
+  right:0;
+  bottom:0;
+  left:0;
+  height:8px;
+  padding:0 !important;
+  cursor:ns-resize;
+  touch-action:none;
+  opacity:.65;
+}
+.calendar-event-resize-handle::after {
+  content:'';
+  position:absolute;
+  left:calc(50% - 13px);
+  bottom:2px;
+  width:26px;
+  height:2px;
+  border-radius:2px;
+  background:currentColor;
+}
+.calendar-timed-event { touch-action:pan-y; }
