@@ -61,8 +61,8 @@ export default function PersonalCalendarPanel() {
 
   useEffect(() => { void load() }, [load])
 
-  const openNew = (date: Date) => {
-    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 10, 0)
+  const openNew = (date: Date, hour = 10, minute = 0) => {
+    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute)
     const end = new Date(start.getTime() + 60 * 60 * 1000)
     setEditing(null)
     setTitle('')
@@ -147,21 +147,42 @@ export default function PersonalCalendarPanel() {
     </div>
     {error && <div className="notice" role="alert">{error}</div>}
     {loading && <p className="calendar-loading">Обновляю календарь…</p>}
-    <div className={`personal-calendar-grid ${view}`}>
-      {view !== 'day' && ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'].map((day) => <div className="calendar-weekday" key={day}>{day}</div>)}
+    {view === 'month' ? <div className="personal-calendar-grid month">
+      {['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'].map((day) => <div className="calendar-weekday" key={day}>{day}</div>)}
       {days.map((day) => {
         const dayEvents = events.filter((event) => new Date(event.start_at) < addDays(day, 1) && new Date(event.end_at) > day)
-        return <div className={`calendar-day ${day.getMonth() !== cursor.getMonth() && view === 'month' ? 'muted-day' : ''}`} key={day.toISOString()}>
-          <button className="calendar-day-number" onClick={() => { setCursor(day); if (view === 'month') setView('day') }}>{view === 'day' ? dateLabel(day, { weekday: 'long', day: 'numeric', month: 'long' }) : day.getDate()}</button>
+        return <div className={`calendar-day ${day.getMonth() !== cursor.getMonth() ? 'muted-day' : ''}`} key={day.toISOString()}>
+          <button className="calendar-day-number" onClick={() => { setCursor(day); setView('day') }}>{day.getDate()}</button>
           <div className="calendar-day-events">
-            {dayEvents.map((event) => <button key={event.id} className={`calendar-event-chip ${event.color}`} onClick={() => openEdit(event)} title={`${event.title} · ${timeLabel(event.start_at)}–${timeLabel(event.end_at)}`}>
-              {view !== 'month' && <time>{timeLabel(event.start_at)}</time>}{event.title}
-            </button>)}
+            {dayEvents.slice(0, 3).map((event) => <button key={event.id} className={`calendar-event-chip ${event.color}`} onClick={() => openEdit(event)} title={`${event.title} · ${timeLabel(event.start_at)}–${timeLabel(event.end_at)}`}>{timeLabel(event.start_at)} {event.title}</button>)}
+            {dayEvents.length > 3 && <span className="calendar-more">ещё {dayEvents.length - 3}</span>}
             <button className="calendar-add-slot" onClick={() => openNew(day)} aria-label={`Добавить событие: ${dateLabel(day)}`}>+</button>
           </div>
         </div>
       })}
-    </div>
+    </div> : <div className={`calendar-time-grid ${view}`}>
+      <div className="calendar-time-head"><div className="calendar-time-gutter" />{days.map((day) => <button key={day.toISOString()} onClick={() => { setCursor(day); if (view === 'week') setView('day') }}>{dateLabel(day, { weekday: 'short', day: 'numeric' })}</button>)}</div>
+      <div className="calendar-time-body">
+        <div className="calendar-hour-labels">{Array.from({ length: 24 }, (_, hour) => <div key={hour}>{String(hour).padStart(2, '0')}:00</div>)}</div>
+        {days.map((day) => {
+          const dayEvents = events.filter((event) => new Date(event.start_at) < addDays(day, 1) && new Date(event.end_at) > day)
+          return <div className="calendar-time-column" key={day.toISOString()}>
+            {Array.from({ length: 24 }, (_, hour) => <button key={hour} className="calendar-time-slot" aria-label={`Создать событие ${dateLabel(day)} ${hour}:00`} onClick={() => openNew(day, hour, 0)} />)}
+            {dayEvents.map((event) => {
+              const start = new Date(event.start_at)
+              const end = new Date(event.end_at)
+              const startMinutes = start < day ? 0 : start.getHours() * 60 + start.getMinutes()
+              const endMinutes = end > addDays(day, 1) ? 1440 : end.getHours() * 60 + end.getMinutes()
+              const top = startMinutes / 60 * 52
+              const height = Math.max(25, (endMinutes - startMinutes) / 60 * 52)
+              return <button key={event.id} className={`calendar-timed-event ${event.color}`} style={{ top, height }} onClick={() => openEdit(event)} title={`${event.title} · ${timeLabel(event.start_at)}–${timeLabel(event.end_at)}`}>
+                <b>{event.title}</b><span>{timeLabel(event.start_at)}–{timeLabel(event.end_at)}</span>
+              </button>
+            })}
+          </div>
+        })}
+      </div>
+    </div>}
     {!events.length && !loading && <div className="calendar-empty-state">Пока нет событий. Нажми на дату или «Событие», чтобы добавить первое.</div>}
     {composer && <div className="calendar-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setComposer(false) }}>
       <form className="calendar-event-form" onSubmit={(event) => void save(event)}>
