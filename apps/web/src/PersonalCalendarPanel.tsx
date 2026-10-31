@@ -45,6 +45,7 @@ export default function PersonalCalendarPanel() {
   const [draggingEventId, setDraggingEventId] = useState<string | null>(null)
   const [draggingTaskBlockId, setDraggingTaskBlockId] = useState<string | null>(null)
   const [resizing, setResizing] = useState<{ id: string; startY: number; duration: number; nextDuration: number } | null>(null)
+  const [resizingTaskBlock, setResizingTaskBlock] = useState<{ id: string; startY: number; duration: number; nextDuration: number } | null>(null)
 
   const range = useMemo(() => {
     if (view === 'day') return { start: startOfDay(cursor), end: addDays(startOfDay(cursor), 1) }
@@ -205,6 +206,22 @@ export default function PersonalCalendarPanel() {
     }
   }
 
+  const finishTaskBlockResize = async () => {
+    if (!resizingTaskBlock) return
+    const block = taskBlocks.find((item) => item.id === resizingTaskBlock.id)
+    const nextDuration = Math.max(15 * 60 * 1000, resizingTaskBlock.nextDuration)
+    setResizingTaskBlock(null)
+    if (!block || nextDuration === resizingTaskBlock.duration) return
+    try {
+      await api.updateTaskBlock(block.id, {
+        end_at: new Date(new Date(block.start_at).getTime() + nextDuration).toISOString(),
+      })
+      await load()
+    } catch (err) {
+      setError(apiError(err))
+    }
+  }
+
   const finishResize = async () => {
     if (!resizing) return
     const event = events.find((item) => item.id === resizing.id)
@@ -296,10 +313,16 @@ export default function PersonalCalendarPanel() {
               const blockEnd = new Date(block.end_at)
               const blockStartMinutes = blockStart < day ? 0 : blockStart.getHours() * 60 + blockStart.getMinutes()
               const blockEndMinutes = blockEnd > addDays(day, 1) ? 1440 : blockEnd.getHours() * 60 + blockEnd.getMinutes()
-              return <div key={block.id} className="calendar-task-block" style={{ top: blockStartMinutes / 60 * 52, height: Math.max(24, (blockEndMinutes - blockStartMinutes) / 60 * 52) }} title={`Нажми, чтобы изменить время · перетащи, чтобы перенести · ${block.title}`} role="button" tabIndex={0} onClick={() => openTaskBlock(block)} onKeyDown={(keyEvent) => { if (keyEvent.key === 'Enter' || keyEvent.key === ' ') { keyEvent.preventDefault(); openTaskBlock(block) } }} draggable
+              return <div key={block.id} className="calendar-task-block" style={{ top: blockStartMinutes / 60 * 52, height: Math.max(24, (resizingTaskBlock?.id === block.id ? resizingTaskBlock.nextDuration / 60000 : blockEndMinutes - blockStartMinutes) / 60 * 52) }} title={`Нажми, чтобы изменить время · перетащи, чтобы перенести · ${block.title}`} role="button" tabIndex={0} onClick={() => openTaskBlock(block)} onKeyDown={(keyEvent) => { if (keyEvent.key === 'Enter' || keyEvent.key === ' ') { keyEvent.preventDefault(); openTaskBlock(block) } }} draggable
                 onDragStart={(dragEvent) => { dragEvent.dataTransfer.effectAllowed = 'move'; dragEvent.dataTransfer.setData('text/plain', block.id); setDraggingTaskBlockId(block.id) }}
                 onDragEnd={() => setDraggingTaskBlockId(null)}>
-                <b>{block.title}</b><span>{timeLabel(block.start_at)}–{timeLabel(block.end_at)}</span><button type="button" className="calendar-task-block-edit" aria-label={`Изменить время: ${block.title}`} title="Изменить время" onClick={(clickEvent) => { clickEvent.stopPropagation(); openTaskBlock(block) }}>↗</button><button type="button" className="calendar-task-block-remove" aria-label={`Удалить блок: ${block.title}`} title="Убрать из календаря" onClick={(clickEvent) => { clickEvent.stopPropagation(); void removeTaskBlock(block) }}>×</button>
+                <b>{tasks.find((task) => task.id === block.task_id)?.title ?? block.title}</b><span>{timeLabel(block.start_at)}–{timeLabel(block.end_at)}</span><span className="calendar-task-block-resize-handle" aria-hidden="true"
+                  onClick={(clickEvent) => clickEvent.stopPropagation()}
+                  onPointerDown={(pointerEvent) => { pointerEvent.stopPropagation(); pointerEvent.preventDefault(); pointerEvent.currentTarget.setPointerCapture(pointerEvent.pointerId); setResizingTaskBlock({ id: block.id, startY: pointerEvent.clientY, duration: blockEnd.getTime() - blockStart.getTime(), nextDuration: blockEnd.getTime() - blockStart.getTime() }) }}
+                  onPointerMove={(pointerEvent) => { if (!resizingTaskBlock || resizingTaskBlock.id !== block.id) return; const delta = (pointerEvent.clientY - resizingTaskBlock.startY) * 60 / 52 * 60000; setResizingTaskBlock({ ...resizingTaskBlock, nextDuration: Math.max(15 * 60000, resizingTaskBlock.duration + delta) }) }}
+                  onPointerUp={() => { void finishTaskBlockResize() }}
+                  onPointerCancel={() => setResizingTaskBlock(null)} />
+                <button type="button" className="calendar-task-block-edit" aria-label={`Изменить время: ${block.title}`} title="Изменить время" onClick={(clickEvent) => { clickEvent.stopPropagation(); openTaskBlock(block) }}>↗</button><button type="button" className="calendar-task-block-remove" aria-label={`Удалить блок: ${block.title}`} title="Убрать из календаря" onClick={(clickEvent) => { clickEvent.stopPropagation(); void removeTaskBlock(block) }}>×</button>
               </div>
             })}
             {dueTasks.map((task) => {
