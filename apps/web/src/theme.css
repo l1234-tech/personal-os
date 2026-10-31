@@ -479,3 +479,9 @@ button, input, select, textarea { font-family: inherit; }
  .calendar-time-head,.calendar-time-body { grid-template-columns:42px repeat(7,minmax(92px,1fr)); }
  .calendar-time-grid.day .calendar-time-head,.calendar-time-grid.day .calendar-time-body { grid-template-columns:42px minmax(220px,1fr); }
 }
+
+.calendar-task-deadline { display:block; overflow:hidden; padding:3px 5px; border-radius:4px; background:#f6eee0; color:#8d7042; font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
+.calendar-deadline-line { position:absolute; z-index:1; left:0; right:0; height:1px; border-top:1px dashed #c29a5e; pointer-events:none; }
+.calendar-deadline-line span { position:absolute; right:3px; top:-13px; padding:1px 3px; border-radius:3px; background:var(--surface); color:#9b7945; font-size:8px; }
+.calendar-deadline-line b { position:absolute; left:3px; top:2px; max-width:calc(100% - 6px); overflow:hidden; padding:2px 4px; border-radius:3px; background:#f6eee0; color:#8d7042; font-size:8px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+:root[data-theme='dark'] .calendar-task-deadline,:root[data-theme='dark'] .calendar-deadline-line b { background:#443a2b; color:#e2c99e; }
