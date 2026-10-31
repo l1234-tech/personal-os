@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ChevronLeft, ChevronRight, Plus, RefreshCw, Trash2, X } from 'lucide-react'
-import { api, ApiError, type ApiTask, type PersonalCalendarEvent } from './api'
+import { api, ApiError, type ApiTask, type PersonalCalendarEvent, type TaskBlock } from './api'
 
 type View = 'day' | 'week' | 'month'
 const colors: PersonalCalendarEvent['color'][] = ['blue', 'violet', 'green', 'amber', 'rose', 'gray']
@@ -26,6 +26,11 @@ export default function PersonalCalendarPanel() {
   const [cursor, setCursor] = useState(() => new Date())
   const [events, setEvents] = useState<PersonalCalendarEvent[]>([])
   const [tasks, setTasks] = useState<ApiTask[]>([])
+  const [taskBlocks, setTaskBlocks] = useState<TaskBlock[]>([])
+  const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [scheduleTaskId, setScheduleTaskId] = useState('')
+  const [scheduleStart, setScheduleStart] = useState('')
+  const [scheduleEnd, setScheduleEnd] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState<PersonalCalendarEvent | null>(null)
@@ -54,9 +59,10 @@ export default function PersonalCalendarPanel() {
     setLoading(true)
     setError('')
     try {
-      const [loadedEvents, loadedTasks] = await Promise.all([api.personalCalendarEvents(iso(range.start), iso(range.end)), api.tasks()])
+      const [loadedEvents, loadedTasks, loadedBlocks] = await Promise.all([api.personalCalendarEvents(iso(range.start), iso(range.end)), api.tasks(), api.taskBlocks(iso(range.start), iso(range.end))])
       setEvents(loadedEvents)
       setTasks(loadedTasks)
+      setTaskBlocks(loadedBlocks)
     } catch (err) {
       setError(apiError(err))
     } finally {
@@ -76,6 +82,27 @@ export default function PersonalCalendarPanel() {
     setEndAt(toLocalInput(end))
     setColor('blue')
     setComposer(true)
+  }
+  const openSchedule = () => {
+    const start = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), 10, 0)
+    const end = new Date(start.getTime() + 60 * 60 * 1000)
+    setScheduleTaskId(tasks.find((task) => task.status !== 'done' && task.status !== 'cancelled')?.id ?? '')
+    setScheduleStart(toLocalInput(start))
+    setScheduleEnd(toLocalInput(end))
+    setScheduleOpen(true)
+  }
+  const saveTaskBlock = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!scheduleTaskId || !scheduleStart || !scheduleEnd || new Date(scheduleEnd) <= new Date(scheduleStart)) {
+      setError('Выбери задачу и корректный временной интервал.')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.createTaskBlock({ task_id: scheduleTaskId, start_at: new Date(scheduleStart).toISOString(), end_at: new Date(scheduleEnd).toISOString() })
+      setScheduleOpen(false)
+      await load()
+    } catch (err) { setError(apiError(err)) } finally { setSaving(false) }
   }
   const openEdit = (event: PersonalCalendarEvent) => {
     setEditing(event)
@@ -183,7 +210,7 @@ export default function PersonalCalendarPanel() {
       <div className="calendar-actions">
         <div className="calendar-views">{(['day', 'week', 'month'] as View[]).map((item) => <button key={item} className={view === item ? 'selected' : ''} onClick={() => setView(item)}>{item === 'day' ? 'День' : item === 'week' ? 'Неделя' : 'Месяц'}</button>)}</div>
         <button className="secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={14}/></button>
-        <button className="primary" onClick={() => openNew(cursor)}><Plus size={15}/> Событие</button>
+        <button className="secondary" onClick={openSchedule}>Запланировать задачу</button><button className="primary" onClick={() => openNew(cursor)}><Plus size={15}/> Событие</button>
       </div>
     </div>
     {error && <div className="notice" role="alert">{error}</div>}
@@ -222,6 +249,15 @@ export default function PersonalCalendarPanel() {
                 if (draggingEventId) void moveEventToSlot(draggingEventId, day, hour)
               }}
             />)}
+            {taskBlocks.filter((block) => new Date(block.start_at) < addDays(day, 1) && new Date(block.end_at) > day).map((block) => {
+              const blockStart = new Date(block.start_at)
+              const blockEnd = new Date(block.end_at)
+              const blockStartMinutes = blockStart < day ? 0 : blockStart.getHours() * 60 + blockStart.getMinutes()
+              const blockEndMinutes = blockEnd > addDays(day, 1) ? 1440 : blockEnd.getHours() * 60 + blockEnd.getMinutes()
+              return <div key={block.id} className="calendar-task-block" style={{ top: blockStartMinutes / 60 * 52, height: Math.max(24, (blockEndMinutes - blockStartMinutes) / 60 * 52) }} title={`Запланированная задача: ${block.title}`}>
+                <b>{block.title}</b><span>{timeLabel(block.start_at)}–{timeLabel(block.end_at)}</span>
+              </div>
+            })}
             {dueTasks.map((task) => {
               const due = new Date(task.due_at as string)
               const top = (due.getHours() * 60 + due.getMinutes()) / 60 * 52
@@ -280,6 +316,14 @@ export default function PersonalCalendarPanel() {
       </div>
     </div>}
     {!events.length && !loading && <div className="calendar-empty-state">Пока нет событий. Нажми на дату или «Событие», чтобы добавить первое.</div>}
+    {scheduleOpen && <div className="calendar-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setScheduleOpen(false) }}>
+      <form className="calendar-event-form" onSubmit={(event) => void saveTaskBlock(event)}>
+        <div className="calendar-form-heading"><div><span>ПЛАНИРОВАНИЕ</span><h3>Запланировать задачу</h3></div><button type="button" className="quiet" onClick={() => setScheduleOpen(false)} aria-label="Закрыть"><X size={18}/></button></div>
+        <label>Задача<select value={scheduleTaskId} onChange={(event) => setScheduleTaskId(event.target.value)} required><option value="">Выбери задачу</option>{tasks.filter((task) => task.status !== 'done' && task.status !== 'cancelled').map((task) => <option key={task.id} value={task.id}>{task.title}</option>)}</select></label>
+        <div className="calendar-form-times"><label>Начало<input type="datetime-local" value={scheduleStart} onChange={(event) => setScheduleStart(event.target.value)} required/></label><label>Окончание<input type="datetime-local" value={scheduleEnd} onChange={(event) => setScheduleEnd(event.target.value)} required/></label></div>
+        <div className="calendar-form-actions"><button type="button" className="secondary" onClick={() => setScheduleOpen(false)}>Отмена</button><button type="submit" className="primary" disabled={saving || !tasks.some((task) => task.id === scheduleTaskId)}>{saving ? 'Сохраняю…' : 'Запланировать'}</button></div>
+      </form>
+    </div>}
     {composer && <div className="calendar-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setComposer(false) }}>
       <form className="calendar-event-form" onSubmit={(event) => void save(event)}>
         <div className="calendar-form-heading"><div><span>{editing ? 'ИЗМЕНЕНИЕ' : 'НОВОЕ СОБЫТИЕ'}</span><h3>{editing ? 'Редактировать событие' : 'Создать событие'}</h3></div><button type="button" className="quiet" onClick={() => setComposer(false)} aria-label="Закрыть"><X size={18}/></button></div>
