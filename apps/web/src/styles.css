@@ -382,3 +382,7 @@ body,.shell,.main { background:#f2f4f8; color:#293346; }
 .calendar-agenda-source.task{background:#4a3d28;color:#f0d19a}
 .calendar-agenda-empty,.calendar-agenda-error{margin:8px 0;color:var(--muted,#85839a);font-size:11px}
 @media(max-width:780px){.calendar-agenda{padding:13px}.calendar-agenda-list{grid-template-columns:1fr}}
+
+
+.calendar-timed-event.google{display:flex;z-index:2;pointer-events:none;cursor:default;background:#203b35;border:1px solid #4f9a7c;color:#d5f4e7;opacity:.96}
+.calendar-event-chip.google{display:block;width:100%;overflow:hidden;text-align:left;border:1px solid #4f9a7c;background:#203b35;color:#d5f4e7;border-radius:5px;padding:3px 5px;font-size:9px}
