@@ -161,6 +161,7 @@ export const api = {
   calendarEvents: (startAt: string, endAt: string) => request<CalendarEvent[]>(`/integrations/calendar/events?start_at=${encodeURIComponent(startAt)}&end_at=${encodeURIComponent(endAt)}`),
   personalCalendarEvents: (startAt: string, endAt: string) => request<PersonalCalendarEvent[]>(`/calendar/events?start_at=${encodeURIComponent(startAt)}&end_at=${encodeURIComponent(endAt)}`),
   publishCalendarEvent: (id: string, calendarId: string) => request<PersonalCalendarEvent>(`/calendar/events/${encodeURIComponent(id)}/publish?calendar_id=${encodeURIComponent(calendarId)}`, { method: "POST" }),
+  resolveCalendarEventFromGoogle: (id: string) => request<PersonalCalendarEvent>(`/calendar/events/${encodeURIComponent(id)}/resolve-google`, { method: "POST" }),
   createCalendarEvent: (payload: { title: string; description?: string | null; start_at: string; end_at: string; all_day?: boolean; color?: PersonalCalendarEvent["color"] }) =>
     request<PersonalCalendarEvent>("/calendar/events", { method: "POST", body: JSON.stringify(payload) }),
   updateCalendarEvent: (id: string, payload: Partial<Pick<PersonalCalendarEvent, "title" | "description" | "start_at" | "end_at" | "all_day" | "color">>) =>
