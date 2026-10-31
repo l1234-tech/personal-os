@@ -240,7 +240,10 @@ def unpublish_event_from_google(
     if response.status_code == 412:
         event.sync_status = "conflict"
         db.commit()
-        raise HTTPException(status_code=409, detail="Google event changed; review it before deleting")
+        raise HTTPException(
+            status_code=409,
+            detail="Google event changed; review it before deleting",
+        )
     if response.status_code not in {204, 404}:
         event.sync_status = "error"
         db.commit()
