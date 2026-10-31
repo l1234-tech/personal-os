@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ChevronLeft, ChevronRight, Plus, RefreshCw, Trash2, X } from 'lucide-react'
-import { api, ApiError, type ApiTask, type PersonalCalendarEvent, type TaskBlock } from './api'
+import { api, ApiError, type ApiTask, type CalendarEvent, type PersonalCalendarEvent, type TaskBlock } from './api'
 
 type View = 'day' | 'week' | 'month'
 const colors: PersonalCalendarEvent['color'][] = ['blue', 'violet', 'green', 'amber', 'rose', 'gray']
@@ -25,6 +25,7 @@ export default function PersonalCalendarPanel() {
   const [view, setView] = useState<View>('week')
   const [cursor, setCursor] = useState(() => new Date())
   const [events, setEvents] = useState<PersonalCalendarEvent[]>([])
+  const [googleEvents, setGoogleEvents] = useState<CalendarEvent[]>([])
   const [tasks, setTasks] = useState<ApiTask[]>([])
   const [taskBlocks, setTaskBlocks] = useState<TaskBlock[]>([])
   const [scheduleOpen, setScheduleOpen] = useState(false)
@@ -62,8 +63,9 @@ export default function PersonalCalendarPanel() {
     setLoading(true)
     setError('')
     try {
-      const [loadedEvents, loadedTasks, loadedBlocks] = await Promise.all([api.personalCalendarEvents(iso(range.start), iso(range.end)), api.tasks(), api.taskBlocks(iso(range.start), iso(range.end))])
+      const [loadedEvents, loadedGoogleEvents, loadedTasks, loadedBlocks] = await Promise.all([api.personalCalendarEvents(iso(range.start), iso(range.end)), api.calendarEvents(iso(range.start), iso(range.end)), api.tasks(), api.taskBlocks(iso(range.start), iso(range.end))])
       setEvents(loadedEvents)
+      setGoogleEvents(loadedGoogleEvents.filter((event) => event.status !== 'cancelled'))
       setTasks(loadedTasks)
       setTaskBlocks(loadedBlocks)
     } catch (err) {
@@ -274,6 +276,7 @@ export default function PersonalCalendarPanel() {
       {['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'].map((day) => <div className="calendar-weekday" key={day}>{day}</div>)}
       {days.map((day) => {
         const dayEvents = events.filter((event) => new Date(event.start_at) < addDays(day, 1) && new Date(event.end_at) > day)
+        const dayGoogleEvents = googleEvents.filter((event) => new Date(event.start_at) < addDays(day, 1) && new Date(event.end_at) > day)
         const dueTasks = tasks.filter((task) => task.due_at && task.status !== 'done' && task.status !== 'cancelled' && new Date(task.due_at) >= day && new Date(task.due_at) < addDays(day, 1))
         const dayBlocks = taskBlocks.filter((block) => new Date(block.start_at) < addDays(day, 1) && new Date(block.end_at) > day)
         return <div className={`calendar-day ${day.getMonth() !== cursor.getMonth() ? 'muted-day' : ''}`} key={day.toISOString()}>
@@ -281,6 +284,7 @@ export default function PersonalCalendarPanel() {
           <div className="calendar-day-events">
             {dayEvents.slice(0, 3).map((event) => <button key={event.id} className={`calendar-event-chip ${event.color}`} onClick={() => openEdit(event)} title={`${event.title} · ${timeLabel(event.start_at)}–${timeLabel(event.end_at)}`}>{timeLabel(event.start_at)} {event.title}</button>)}
             {dayEvents.length > 3 && <span className="calendar-more">ещё {dayEvents.length - 3}</span>}
+            {dayGoogleEvents.slice(0, 2).map((event) => <span key={event.id} className="calendar-event-chip google" title={event.title}>G · {event.all_day ? 'Весь день' : timeLabel(event.start_at)} {event.title}</span>)}
             {dayBlocks.slice(0, 2).map((block) => <span className="calendar-task-scheduled" key={block.id} title={`Запланировано: ${timeLabel(block.start_at)}–${timeLabel(block.end_at)}`}>▦ {timeLabel(block.start_at)} {tasks.find((task) => task.id === block.task_id)?.title ?? block.title}</span>)}
             {dayBlocks.length > 2 && <span className="calendar-more">ещё {dayBlocks.length - 2} блока</span>}
             {dueTasks.slice(0, 2).map((task) => <span className="calendar-task-deadline" key={task.id} title={`Срок: ${task.title}`}>◆ {task.title}</span>)}
@@ -329,6 +333,15 @@ export default function PersonalCalendarPanel() {
               const due = new Date(task.due_at as string)
               const top = (due.getHours() * 60 + due.getMinutes()) / 60 * 52
               return <div key={task.id} className="calendar-deadline-line" style={{ top }} title={`Дедлайн: ${task.title}`}><span>{timeLabel(task.due_at as string)}</span><b>{task.title}</b></div>
+            })}
+            {googleEvents.filter((event) => new Date(event.start_at) < addDays(day, 1) && new Date(event.end_at) > day).map((event) => {
+              const start = new Date(event.start_at)
+              const end = new Date(event.end_at)
+              const startMinutes = start < day ? 0 : start.getHours() * 60 + start.getMinutes()
+              const endMinutes = end > addDays(day, 1) ? 1440 : end.getHours() * 60 + end.getMinutes()
+              return <div key={event.id} className="calendar-timed-event google" style={{ top: startMinutes / 60 * 52, height: Math.max(25, (endMinutes - startMinutes) / 60 * 52) }} title={`Google Calendar · ${event.title}`}>
+                <b>{event.title}</b><span>{event.all_day ? 'Весь день' : `${timeLabel(event.start_at)}–${timeLabel(event.end_at)}`}</span>
+              </div>
             })}
             {dayEvents.map((event) => {
               const start = new Date(event.start_at)
@@ -382,7 +395,7 @@ export default function PersonalCalendarPanel() {
         })}
       </div>
     </div>}
-    {!events.length && !loading && <div className="calendar-empty-state">Пока нет событий. Нажми на дату или «Событие», чтобы добавить первое.</div>}
+    {!events.length && !googleEvents.length && !loading && <div className="calendar-empty-state">Пока нет событий. Нажми на дату или «Событие», чтобы добавить первое.</div>}
     {scheduleOpen && <div className="calendar-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setScheduleOpen(false) }}>
       <form className="calendar-event-form" onSubmit={(event) => void saveTaskBlock(event)}>
         <div className="calendar-form-heading"><div><span>ПЛАНИРОВАНИЕ</span><h3>{editingTaskBlock ? 'Изменить время задачи' : 'Запланировать задачу'}</h3></div><button type="button" className="quiet" onClick={() => setScheduleOpen(false)} aria-label="Закрыть"><X size={18}/></button></div>
