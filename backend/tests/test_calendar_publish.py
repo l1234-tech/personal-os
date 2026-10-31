@@ -225,3 +225,61 @@ def test_publish_event_marks_error_on_network_failure(monkeypatch) -> None:
     assert event.sync_status == "error"
     assert db.committed
     assert [method for method, _ in client.calls] == ["GET", "POST"]
+
+
+def test_resolve_event_from_google_accepts_remote_version(monkeypatch) -> None:
+    event = make_linked_event()
+    db, user, _integration, event = make_context(event)
+    client = FakeGoogleClient(
+        [
+            FakeResponse(
+                {
+                    "summary": "Updated lecture",
+                    "description": "Updated details",
+                    "etag": '"version-2"',
+                    "updated": "2026-11-01T12:00:00Z",
+                    "start": {"dateTime": "2026-11-03T12:00:00+03:00"},
+                    "end": {"dateTime": "2026-11-03T13:30:00+03:00"},
+                }
+            )
+        ]
+    )
+    install_google_client(monkeypatch, client)
+
+    result = calendar_routes.resolve_event_from_google(event.id, db, user)
+
+    assert result is event
+    assert event.title == "Updated lecture"
+    assert event.description == "Updated details"
+    assert event.start_at == datetime(2026, 11, 3, 12, 0, tzinfo=__import__("datetime").timezone(__import__("datetime").timedelta(hours=3)))
+    assert event.end_at == datetime(2026, 11, 3, 13, 30, tzinfo=__import__("datetime").timezone(__import__("datetime").timedelta(hours=3)))
+    assert event.google_etag == '"version-2"'
+    assert event.sync_status == "synced"
+    assert db.committed and db.refreshed
+    assert [method for method, _ in client.calls] == ["GET"]
+
+
+def test_resolve_event_from_google_rejects_invalid_interval(monkeypatch) -> None:
+    event = make_linked_event()
+    db, user, _integration, event = make_context(event)
+    original_title = event.title
+    client = FakeGoogleClient(
+        [
+            FakeResponse(
+                {
+                    "summary": "Updated lecture",
+                    "etag": '"version-2"',
+                    "start": {"dateTime": "2026-11-03T12:00:00"},
+                    "end": {"dateTime": "2026-11-03T13:00:00Z"},
+                }
+            )
+        ]
+    )
+    install_google_client(monkeypatch, client)
+
+    with pytest.raises(HTTPException) as error:
+        calendar_routes.resolve_event_from_google(event.id, db, user)
+
+    assert error.value.status_code == 502
+    assert event.title == original_title
+    assert not db.committed
