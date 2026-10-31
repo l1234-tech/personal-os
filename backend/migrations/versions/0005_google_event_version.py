@@ -12,7 +12,10 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column("personal_calendar_events", sa.Column("google_etag", sa.String(length=256), nullable=True))
+    op.add_column(
+        "personal_calendar_events",
+        sa.Column("google_etag", sa.String(length=256), nullable=True),
+    )
     op.add_column(
         "personal_calendar_events",
         sa.Column("google_updated_at", sa.DateTime(timezone=True), nullable=True),
