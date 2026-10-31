@@ -281,7 +281,7 @@ export default function PersonalCalendarPanel() {
           <div className="calendar-day-events">
             {dayEvents.slice(0, 3).map((event) => <button key={event.id} className={`calendar-event-chip ${event.color}`} onClick={() => openEdit(event)} title={`${event.title} · ${timeLabel(event.start_at)}–${timeLabel(event.end_at)}`}>{timeLabel(event.start_at)} {event.title}</button>)}
             {dayEvents.length > 3 && <span className="calendar-more">ещё {dayEvents.length - 3}</span>}
-            {dayBlocks.slice(0, 2).map((block) => <span className="calendar-task-scheduled" key={block.id} title={`Запланировано: ${timeLabel(block.start_at)}–${timeLabel(block.end_at)}`}>▦ {timeLabel(block.start_at)} {block.title}</span>)}
+            {dayBlocks.slice(0, 2).map((block) => <span className="calendar-task-scheduled" key={block.id} title={`Запланировано: ${timeLabel(block.start_at)}–${timeLabel(block.end_at)}`}>▦ {timeLabel(block.start_at)} {tasks.find((task) => task.id === block.task_id)?.title ?? block.title}</span>)}
             {dayBlocks.length > 2 && <span className="calendar-more">ещё {dayBlocks.length - 2} блока</span>}
             {dueTasks.slice(0, 2).map((task) => <span className="calendar-task-deadline" key={task.id} title={`Срок: ${task.title}`}>◆ {task.title}</span>)}
             <button className="calendar-add-slot" onClick={() => openNew(day)} aria-label={`Добавить событие: ${dateLabel(day)}`}>+</button>
