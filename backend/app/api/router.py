@@ -1,6 +1,16 @@
 from fastapi import APIRouter
 
-from app.api.routes import auth, calendar, health, integrations, meta, task_blocks, tasks, time_entries, timer
+from app.api.routes import (
+    auth,
+    calendar,
+    health,
+    integrations,
+    meta,
+    task_blocks,
+    tasks,
+    time_entries,
+    timer,
+)
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["health"])
