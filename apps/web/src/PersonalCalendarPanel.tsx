@@ -37,6 +37,7 @@ export default function PersonalCalendarPanel() {
   const [color, setColor] = useState<PersonalCalendarEvent['color']>('blue')
   const [saving, setSaving] = useState(false)
   const [draggingEventId, setDraggingEventId] = useState<string | null>(null)
+  const [resizing, setResizing] = useState<{ id: string; startY: number; duration: number; nextDuration: number } | null>(null)
 
   const range = useMemo(() => {
     if (view === 'day') return { start: startOfDay(cursor), end: addDays(startOfDay(cursor), 1) }
@@ -139,6 +140,22 @@ export default function PersonalCalendarPanel() {
     }
   }
 
+  const finishResize = async () => {
+    if (!resizing) return
+    const event = events.find((item) => item.id === resizing.id)
+    const nextDuration = Math.max(15 * 60 * 1000, resizing.nextDuration)
+    setResizing(null)
+    if (!event || nextDuration === resizing.duration) return
+    try {
+      await api.updateCalendarEvent(event.id, {
+        end_at: new Date(new Date(event.start_at).getTime() + nextDuration).toISOString(),
+      })
+      await load()
+    } catch (err) {
+      setError(apiError(err))
+    }
+  }
+
   const days = useMemo(() => {
     const count = view === 'month' ? 42 : view === 'week' ? 7 : 1
     return Array.from({ length: count }, (_, index) => addDays(range.start, index))
@@ -216,7 +233,7 @@ export default function PersonalCalendarPanel() {
               const startMinutes = start < day ? 0 : start.getHours() * 60 + start.getMinutes()
               const endMinutes = end > addDays(day, 1) ? 1440 : end.getHours() * 60 + end.getMinutes()
               const top = startMinutes / 60 * 52
-              const height = Math.max(25, (endMinutes - startMinutes) / 60 * 52)
+              const duration = (resizing?.id === event.id ? resizing.nextDuration : end.getTime() - start.getTime()) / 60000\n              const height = Math.max(25, duration / 60 * 52)
               return <button
                 key={event.id}
                 className={`calendar-timed-event ${event.color}`}
@@ -232,6 +249,31 @@ export default function PersonalCalendarPanel() {
                 title={`Перетащи, чтобы перенести · ${event.title} · ${timeLabel(event.start_at)}–${timeLabel(event.end_at)}`}
               >
                 <b>{event.title}</b><span>{timeLabel(event.start_at)}–{timeLabel(event.end_at)}</span>
+                <span
+                  className="calendar-event-resize-handle"
+                  role="slider"
+                  aria-label="Изменить длительность события"
+                  aria-valuemin={15}
+                  aria-valuenow={Math.round(duration)}
+                  onPointerDown={(pointerEvent) => {
+                    pointerEvent.stopPropagation()
+                    pointerEvent.preventDefault()
+                    pointerEvent.currentTarget.setPointerCapture(pointerEvent.pointerId)
+                    setResizing({
+                      id: event.id,
+                      startY: pointerEvent.clientY,
+                      duration: end.getTime() - start.getTime(),
+                      nextDuration: end.getTime() - start.getTime(),
+                    })
+                  }}
+                  onPointerMove={(pointerEvent) => {
+                    if (!resizing || resizing.id !== event.id) return
+                    const delta = (pointerEvent.clientY - resizing.startY) * 60 / 52 * 60000
+                    setResizing({ ...resizing, nextDuration: Math.max(15 * 60000, resizing.duration + delta) })
+                  }}
+                  onPointerUp={() => { void finishResize() }}
+                  onPointerCancel={() => { setResizing(null) }}
+                />
               </button>
             })}
           </div>
