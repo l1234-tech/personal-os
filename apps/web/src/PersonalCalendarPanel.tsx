@@ -4,7 +4,6 @@ import { api, ApiError, type PersonalCalendarEvent } from './api'
 
 type View = 'day' | 'week' | 'month'
 const colors: PersonalCalendarEvent['color'][] = ['blue', 'violet', 'green', 'amber', 'rose', 'gray']
-const pad = (value: number) => String(value).padStart(2, '0')
 const toLocalInput = (date: Date) => {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
   return local.toISOString().slice(0, 16)
@@ -58,7 +57,7 @@ export default function PersonalCalendarPanel() {
     } finally {
       setLoading(false)
     }
-  }, [range.start.getTime(), range.end.getTime()])
+  }, [range.start, range.end])
 
   useEffect(() => { void load() }, [load])
 
@@ -119,7 +118,7 @@ export default function PersonalCalendarPanel() {
   const days = useMemo(() => {
     const count = view === 'month' ? 42 : view === 'week' ? 7 : 1
     return Array.from({ length: count }, (_, index) => addDays(range.start, index))
-  }, [range.start.getTime(), view])
+  }, [range.start, view])
   const titleLabel = view === 'day'
     ? dateLabel(cursor, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     : view === 'week'
