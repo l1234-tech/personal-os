@@ -1,4 +1,6 @@
 from datetime import datetime
+
+# ruff: noqa: E501
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -26,8 +28,8 @@ def _owned_block(db: Session, user_id: UUID, block_id: UUID) -> TaskBlock:
 
 @router.get("", response_model=list[TaskBlockRead])
 def list_task_blocks(
-    start_at: datetime = Query(...),
-    end_at: datetime = Query(...),
+    start_at: datetime = Query(...),  # noqa: B008
+    end_at: datetime = Query(...),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
     user: User = Depends(get_current_user),  # noqa: B008
 ) -> list[TaskBlock]:
