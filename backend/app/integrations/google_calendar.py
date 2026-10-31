@@ -21,11 +21,18 @@ def require_google_oauth_settings() -> tuple[str, str, str, str]:
     client_secret = settings.google_client_secret
     redirect_uri = settings.google_redirect_uri
     encryption_key = settings.token_encryption_key
-    if not all((client_id, client_secret, redirect_uri, encryption_key)):
+    if not all(
+        isinstance(value, str) and value
+        for value in (client_id, client_secret, redirect_uri, encryption_key)
+    ):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Google Calendar integration is not configured on the server",
         )
+    assert isinstance(client_id, str)
+    assert isinstance(client_secret, str)
+    assert isinstance(redirect_uri, str)
+    assert isinstance(encryption_key, str)
     return client_id, client_secret, redirect_uri, encryption_key
 
 

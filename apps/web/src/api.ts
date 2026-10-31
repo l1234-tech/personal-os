@@ -33,6 +33,16 @@ export type ApiTask = {
   updated_at: string
 }
 
+export type TaskBlock = {
+  id: string
+  task_id: string
+  title: string
+  start_at: string
+  end_at: string
+  status: string
+  created_at: string
+}
+
 export type TimerState = {
   id: string
   task_id: string | null
@@ -47,6 +57,22 @@ export type TimerState = {
 export type Integration = { id: string; provider: string; external_account_id: string; status: string; scopes: string[]; connected_at: string; updated_at: string }
 export type GoogleCalendar = { id: string; summary: string; primary: boolean; access_role: string; selected: boolean }
 export type CalendarEvent = { id: string; calendar_id: string; external_event_id: string; title: string; description: string | null; start_at: string; end_at: string; all_day: boolean; status: string; html_link: string | null; external_updated_at: string | null; synced_at: string }
+
+export type PersonalCalendarEvent = {
+  id: string
+  title: string
+  description: string | null
+  start_at: string
+  end_at: string
+  all_day: boolean
+  color: "blue" | "violet" | "green" | "amber" | "rose" | "gray"
+  google_calendar_id: string | null
+  google_event_id: string | null
+  sync_status: "local" | "pending" | "synced" | "error" | "conflict"
+  created_at: string
+  updated_at: string
+}
+
 export type CalendarSyncResult = { calendars_synced: number; events_seen: number; events_created_or_updated: number; synced_at: string }
 
 export type TimeEntry = {
@@ -107,6 +133,10 @@ export const api = {
     }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
   tasks: () => request<ApiTask[]>("/tasks?limit=200"),
+  taskBlocks: (startAt: string, endAt: string) => request<TaskBlock[]>(`/task-blocks?start_at=${encodeURIComponent(startAt)}&end_at=${encodeURIComponent(endAt)}`),
+  createTaskBlock: (payload: { task_id: string; start_at: string; end_at: string }) => request<TaskBlock>("/task-blocks", { method: "POST", body: JSON.stringify(payload) }),
+  updateTaskBlock: (id: string, payload: { start_at?: string; end_at?: string }) => request<TaskBlock>(`/task-blocks/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteTaskBlock: (id: string) => request<void>(`/task-blocks/${encodeURIComponent(id)}`, { method: "DELETE" }),
   createTask: (payload: { title: string; category: string; priority: TaskPriority; estimated_minutes?: number }) =>
     request<ApiTask>("/tasks", { method: "POST", body: JSON.stringify(payload) }),
   updateTask: (id: string, payload: Partial<Pick<ApiTask, "title" | "description" | "status" | "priority" | "category" | "due_at" | "estimated_minutes">>) =>
@@ -129,6 +159,15 @@ export const api = {
   saveGoogleCalendars: (calendarIds: string[]) => request<GoogleCalendar[]>("/integrations/google/calendars", { method: "PUT", body: JSON.stringify({ calendar_ids: calendarIds }) }),
   syncGoogle: () => request<CalendarSyncResult>("/integrations/google/sync", { method: "POST" }),
   calendarEvents: (startAt: string, endAt: string) => request<CalendarEvent[]>(`/integrations/calendar/events?start_at=${encodeURIComponent(startAt)}&end_at=${encodeURIComponent(endAt)}`),
+  personalCalendarEvents: (startAt: string, endAt: string) => request<PersonalCalendarEvent[]>(`/calendar/events?start_at=${encodeURIComponent(startAt)}&end_at=${encodeURIComponent(endAt)}`),
+  publishCalendarEvent: (id: string, calendarId: string) => request<PersonalCalendarEvent>(`/calendar/events/${encodeURIComponent(id)}/publish?calendar_id=${encodeURIComponent(calendarId)}`, { method: "POST" }),
+  resolveCalendarEventFromGoogle: (id: string) => request<PersonalCalendarEvent>(`/calendar/events/${encodeURIComponent(id)}/resolve-google`, { method: "POST" }),
+  unpublishCalendarEventFromGoogle: (id: string) => request<PersonalCalendarEvent>(`/calendar/events/${encodeURIComponent(id)}/unpublish-google`, { method: "POST" }),
+  createCalendarEvent: (payload: { title: string; description?: string | null; start_at: string; end_at: string; all_day?: boolean; color?: PersonalCalendarEvent["color"] }) =>
+    request<PersonalCalendarEvent>("/calendar/events", { method: "POST", body: JSON.stringify(payload) }),
+  updateCalendarEvent: (id: string, payload: Partial<Pick<PersonalCalendarEvent, "title" | "description" | "start_at" | "end_at" | "all_day" | "color">>) =>
+    request<PersonalCalendarEvent>(`/calendar/events/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteCalendarEvent: (id: string) => request<void>(`/calendar/events/${encodeURIComponent(id)}`, { method: "DELETE" }),
   disconnectGoogle: () => request<void>("/integrations/google", { method: "DELETE" }),
   updateTimeEntry: (id: string, payload: Partial<Pick<TimeEntry, "task_id" | "category" | "notes" | "started_at" | "ended_at" | "duration_seconds">>) =>
     request<TimeEntry>(`/time-entries/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(payload) }),
