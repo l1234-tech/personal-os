@@ -42,6 +42,7 @@ export default function PersonalCalendarPanel() {
   const [color, setColor] = useState<PersonalCalendarEvent['color']>('blue')
   const [saving, setSaving] = useState(false)
   const [draggingEventId, setDraggingEventId] = useState<string | null>(null)
+  const [draggingTaskBlockId, setDraggingTaskBlockId] = useState<string | null>(null)
   const [resizing, setResizing] = useState<{ id: string; startY: number; duration: number; nextDuration: number } | null>(null)
 
   const range = useMemo(() => {
@@ -167,6 +168,18 @@ export default function PersonalCalendarPanel() {
     }
   }
 
+  const moveTaskBlockToSlot = async (blockId: string, day: Date, hour: number) => {
+    const block = taskBlocks.find((item) => item.id === blockId)
+    if (!block) return
+    const duration = new Date(block.end_at).getTime() - new Date(block.start_at).getTime()
+    const nextStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, 0)
+    setDraggingTaskBlockId(null)
+    try {
+      await api.updateTaskBlock(blockId, { start_at: nextStart.toISOString(), end_at: new Date(nextStart.getTime() + duration).toISOString() })
+      await load()
+    } catch (err) { setError(apiError(err)) }
+  }
+
   const finishResize = async () => {
     if (!resizing) return
     const event = events.find((item) => item.id === resizing.id)
@@ -243,10 +256,11 @@ export default function PersonalCalendarPanel() {
               className="calendar-time-slot"
               aria-label={`Создать событие ${dateLabel(day)} ${hour}:00`}
               onClick={() => openNew(day, hour, 0)}
-              onDragOver={(event) => { if (draggingEventId) event.preventDefault() }}
+              onDragOver={(event) => { if (draggingEventId || draggingTaskBlockId) event.preventDefault() }}
               onDrop={(event) => {
                 event.preventDefault()
                 if (draggingEventId) void moveEventToSlot(draggingEventId, day, hour)
+                else if (draggingTaskBlockId) void moveTaskBlockToSlot(draggingTaskBlockId, day, hour)
               }}
             />)}
             {taskBlocks.filter((block) => new Date(block.start_at) < addDays(day, 1) && new Date(block.end_at) > day).map((block) => {
@@ -254,7 +268,9 @@ export default function PersonalCalendarPanel() {
               const blockEnd = new Date(block.end_at)
               const blockStartMinutes = blockStart < day ? 0 : blockStart.getHours() * 60 + blockStart.getMinutes()
               const blockEndMinutes = blockEnd > addDays(day, 1) ? 1440 : blockEnd.getHours() * 60 + blockEnd.getMinutes()
-              return <div key={block.id} className="calendar-task-block" style={{ top: blockStartMinutes / 60 * 52, height: Math.max(24, (blockEndMinutes - blockStartMinutes) / 60 * 52) }} title={`Запланированная задача: ${block.title}`}>
+              return <div key={block.id} className="calendar-task-block" style={{ top: blockStartMinutes / 60 * 52, height: Math.max(24, (blockEndMinutes - blockStartMinutes) / 60 * 52) }} title={`Перетащи, чтобы перенести · ${block.title}`} draggable
+                onDragStart={(dragEvent) => { dragEvent.dataTransfer.effectAllowed = 'move'; dragEvent.dataTransfer.setData('text/plain', block.id); setDraggingTaskBlockId(block.id) }}
+                onDragEnd={() => setDraggingTaskBlockId(null)}>
                 <b>{block.title}</b><span>{timeLabel(block.start_at)}–{timeLabel(block.end_at)}</span>
               </div>
             })}
