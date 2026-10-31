@@ -521,3 +521,44 @@ button, input, select, textarea { font-family: inherit; }
 .calendar-task-block:active { cursor:grabbing; }
 .calendar-task-block span { font-size:9px; opacity:.72; }
 .calendar-event-form select { width:100%; min-width:0; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--text); }
+
+
+/* Scheduled task block controls and month indicators */
+.calendar-task-block {
+  position: relative;
+  padding-right: 24px;
+}
+.calendar-task-block-remove {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: inherit;
+  background: transparent;
+  opacity: .7;
+  cursor: pointer;
+  line-height: 1;
+}
+.calendar-task-block-remove:hover {
+  opacity: 1;
+  background: rgba(127, 127, 127, .18);
+}
+.calendar-task-scheduled {
+  display: block;
+  overflow: hidden;
+  margin-top: 3px;
+  padding: 2px 4px;
+  border: 1px dashed var(--accent, #8b7cf6);
+  border-radius: 4px;
+  color: var(--text-secondary, inherit);
+  font-size: 10px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
