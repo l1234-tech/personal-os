@@ -61,7 +61,7 @@ export default function GoogleCalendarPanel() {
     finally { setBusy(false) }
   }
   async function publish(event: PersonalCalendarEvent) {
-    const target = selected[0]
+    const target = event.google_calendar_id ?? selected[0]
     if (!target) { setNotice('Сначала выбери и сохрани календарь Google.'); return }
     setBusy(true); setNotice('')
     try {
