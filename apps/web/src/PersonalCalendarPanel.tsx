@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ChevronLeft, ChevronRight, Plus, RefreshCw, Trash2, X } from 'lucide-react'
-import { api, ApiError, type PersonalCalendarEvent } from './api'
+import { api, ApiError, type ApiTask, type PersonalCalendarEvent } from './api'
 
 type View = 'day' | 'week' | 'month'
 const colors: PersonalCalendarEvent['color'][] = ['blue', 'violet', 'green', 'amber', 'rose', 'gray']
@@ -25,6 +25,7 @@ export default function PersonalCalendarPanel() {
   const [view, setView] = useState<View>('week')
   const [cursor, setCursor] = useState(() => new Date())
   const [events, setEvents] = useState<PersonalCalendarEvent[]>([])
+  const [tasks, setTasks] = useState<ApiTask[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState<PersonalCalendarEvent | null>(null)
@@ -51,7 +52,9 @@ export default function PersonalCalendarPanel() {
     setLoading(true)
     setError('')
     try {
-      setEvents(await api.personalCalendarEvents(iso(range.start), iso(range.end)))
+      const [loadedEvents, loadedTasks] = await Promise.all([api.personalCalendarEvents(iso(range.start), iso(range.end)), api.tasks()])
+      setEvents(loadedEvents)
+      setTasks(loadedTasks)
     } catch (err) {
       setError(apiError(err))
     } finally {
@@ -151,11 +154,13 @@ export default function PersonalCalendarPanel() {
       {['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'].map((day) => <div className="calendar-weekday" key={day}>{day}</div>)}
       {days.map((day) => {
         const dayEvents = events.filter((event) => new Date(event.start_at) < addDays(day, 1) && new Date(event.end_at) > day)
+        const dueTasks = tasks.filter((task) => task.due_at && task.status !== 'done' && task.status !== 'cancelled' && new Date(task.due_at) >= day && new Date(task.due_at) < addDays(day, 1))
         return <div className={`calendar-day ${day.getMonth() !== cursor.getMonth() ? 'muted-day' : ''}`} key={day.toISOString()}>
           <button className="calendar-day-number" onClick={() => { setCursor(day); setView('day') }}>{day.getDate()}</button>
           <div className="calendar-day-events">
             {dayEvents.slice(0, 3).map((event) => <button key={event.id} className={`calendar-event-chip ${event.color}`} onClick={() => openEdit(event)} title={`${event.title} · ${timeLabel(event.start_at)}–${timeLabel(event.end_at)}`}>{timeLabel(event.start_at)} {event.title}</button>)}
             {dayEvents.length > 3 && <span className="calendar-more">ещё {dayEvents.length - 3}</span>}
+            {dueTasks.slice(0, 2).map((task) => <span className="calendar-task-deadline" key={task.id} title={`Срок: ${task.title}`}>◆ {task.title}</span>)}
             <button className="calendar-add-slot" onClick={() => openNew(day)} aria-label={`Добавить событие: ${dateLabel(day)}`}>+</button>
           </div>
         </div>
@@ -166,8 +171,14 @@ export default function PersonalCalendarPanel() {
         <div className="calendar-hour-labels">{Array.from({ length: 24 }, (_, hour) => <div key={hour}>{String(hour).padStart(2, '0')}:00</div>)}</div>
         {days.map((day) => {
           const dayEvents = events.filter((event) => new Date(event.start_at) < addDays(day, 1) && new Date(event.end_at) > day)
+          const dueTasks = tasks.filter((task) => task.due_at && task.status !== 'done' && task.status !== 'cancelled' && new Date(task.due_at) >= day && new Date(task.due_at) < addDays(day, 1))
           return <div className="calendar-time-column" key={day.toISOString()}>
             {Array.from({ length: 24 }, (_, hour) => <button key={hour} className="calendar-time-slot" aria-label={`Создать событие ${dateLabel(day)} ${hour}:00`} onClick={() => openNew(day, hour, 0)} />)}
+            {dueTasks.map((task) => {
+              const due = new Date(task.due_at as string)
+              const top = (due.getHours() * 60 + due.getMinutes()) / 60 * 52
+              return <div key={task.id} className="calendar-deadline-line" style={{ top }} title={`Дедлайн: ${task.title}`}><span>{timeLabel(task.due_at as string)}</span><b>{task.title}</b></div>
+            })}
             {dayEvents.map((event) => {
               const start = new Date(event.start_at)
               const end = new Date(event.end_at)
