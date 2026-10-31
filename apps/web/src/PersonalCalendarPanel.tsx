@@ -180,6 +180,19 @@ export default function PersonalCalendarPanel() {
     } catch (err) { setError(apiError(err)) }
   }
 
+  const removeTaskBlock = async (block: TaskBlock) => {
+    if (!window.confirm(`Убрать запланированный блок «${block.title}»?`)) return
+    setSaving(true)
+    try {
+      await api.deleteTaskBlock(block.id)
+      await load()
+    } catch (err) {
+      setError(apiError(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const finishResize = async () => {
     if (!resizing) return
     const event = events.find((item) => item.id === resizing.id)
@@ -233,11 +246,14 @@ export default function PersonalCalendarPanel() {
       {days.map((day) => {
         const dayEvents = events.filter((event) => new Date(event.start_at) < addDays(day, 1) && new Date(event.end_at) > day)
         const dueTasks = tasks.filter((task) => task.due_at && task.status !== 'done' && task.status !== 'cancelled' && new Date(task.due_at) >= day && new Date(task.due_at) < addDays(day, 1))
+        const dayBlocks = taskBlocks.filter((block) => new Date(block.start_at) < addDays(day, 1) && new Date(block.end_at) > day)
         return <div className={`calendar-day ${day.getMonth() !== cursor.getMonth() ? 'muted-day' : ''}`} key={day.toISOString()}>
           <button className="calendar-day-number" onClick={() => { setCursor(day); setView('day') }}>{day.getDate()}</button>
           <div className="calendar-day-events">
             {dayEvents.slice(0, 3).map((event) => <button key={event.id} className={`calendar-event-chip ${event.color}`} onClick={() => openEdit(event)} title={`${event.title} · ${timeLabel(event.start_at)}–${timeLabel(event.end_at)}`}>{timeLabel(event.start_at)} {event.title}</button>)}
             {dayEvents.length > 3 && <span className="calendar-more">ещё {dayEvents.length - 3}</span>}
+            {dayBlocks.slice(0, 2).map((block) => <span className="calendar-task-scheduled" key={block.id} title={`Запланировано: ${timeLabel(block.start_at)}–${timeLabel(block.end_at)}`}>▦ {timeLabel(block.start_at)} {block.title}</span>)}
+            {dayBlocks.length > 2 && <span className="calendar-more">ещё {dayBlocks.length - 2} блока</span>}
             {dueTasks.slice(0, 2).map((task) => <span className="calendar-task-deadline" key={task.id} title={`Срок: ${task.title}`}>◆ {task.title}</span>)}
             <button className="calendar-add-slot" onClick={() => openNew(day)} aria-label={`Добавить событие: ${dateLabel(day)}`}>+</button>
           </div>
@@ -271,7 +287,7 @@ export default function PersonalCalendarPanel() {
               return <div key={block.id} className="calendar-task-block" style={{ top: blockStartMinutes / 60 * 52, height: Math.max(24, (blockEndMinutes - blockStartMinutes) / 60 * 52) }} title={`Перетащи, чтобы перенести · ${block.title}`} draggable
                 onDragStart={(dragEvent) => { dragEvent.dataTransfer.effectAllowed = 'move'; dragEvent.dataTransfer.setData('text/plain', block.id); setDraggingTaskBlockId(block.id) }}
                 onDragEnd={() => setDraggingTaskBlockId(null)}>
-                <b>{block.title}</b><span>{timeLabel(block.start_at)}–{timeLabel(block.end_at)}</span>
+                <b>{block.title}</b><span>{timeLabel(block.start_at)}–{timeLabel(block.end_at)}</span><button type="button" className="calendar-task-block-remove" aria-label={`Удалить блок: ${block.title}`} title="Убрать из календаря" onClick={(clickEvent) => { clickEvent.stopPropagation(); void removeTaskBlock(block) }}>×</button>
               </div>
             })}
             {dueTasks.map((task) => {
