@@ -71,6 +71,16 @@ export default function GoogleCalendarPanel() {
     } catch (error) { setNotice(message(error)) }
     finally { setBusy(false) }
   }
+  async function acceptGoogleVersion(event: PersonalCalendarEvent) {
+    if (!window.confirm(`Заменить локальное событие «${event.title}» актуальной версией из Google Calendar? Локальные изменения будут потеряны.`)) return
+    setBusy(true); setNotice('')
+    try {
+      const saved = await api.resolveCalendarEventFromGoogle(event.id)
+      setPersonalEvents((current) => current.map((item) => item.id === saved.id ? saved : item))
+      setNotice('Локальное событие обновлено версией из Google Calendar.')
+    } catch (error) { setNotice(message(error)) }
+    finally { setBusy(false) }
+  }
   async function disconnect() {
     if (!window.confirm('Отключить Google Calendar и удалить сохранённые токены и синхронизированные события из Personal OS?')) return
     setBusy(true); setNotice('')
@@ -92,7 +102,7 @@ export default function GoogleCalendarPanel() {
         <div className="calendar-list">{calendars.map((calendar) => <label className="calendar-choice" key={calendar.id}><input type="checkbox" checked={selected.includes(calendar.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, calendar.id] : current.filter((id) => id !== calendar.id))}/><span><b>{calendar.summary}</b><small>{calendar.primary ? 'Основной календарь' : calendar.access_role}</small></span>{calendar.primary && <em>Основной</em>}</label>)}{!calendars.length && <div className="empty">Список календарей пуст. Попробуй обновить данные.</div>}</div>
       </article>
       <article className="panel"><div className="panel-title"><div><h3>Мои события Personal OS</h3><p>Выбери календарь выше и опубликуй событие. Повторная публикация проверяет конфликты.</p></div><span className="duration">{personalEvents.length} событий</span></div>
-        <div className="calendar-event-list">{personalEvents.map((event) => <div className="calendar-event-row" key={event.id}><time>{event.all_day ? 'Весь день' : new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(event.start_at))}</time><div><b>{event.title}</b><small>{event.sync_status === 'synced' ? 'Синхронизировано' : event.sync_status === 'conflict' ? 'Конфликт — требуется проверка' : event.sync_status === 'error' ? 'Ошибка отправки' : 'Только в Personal OS'}</small></div><button className="secondary" onClick={() => void publish(event)} disabled={busy || selected.length === 0 || event.sync_status === 'conflict'}>{event.google_event_id ? 'Обновить в Google' : 'Опубликовать'}</button></div>)}{!personalEvents.length && <div className="empty">Личных событий в этом диапазоне пока нет.</div>}</div>
+        <div className="calendar-event-list">{personalEvents.map((event) => <div className="calendar-event-row" key={event.id}><time>{event.all_day ? 'Весь день' : new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(event.start_at))}</time><div><b>{event.title}</b><small>{event.sync_status === 'synced' ? 'Синхронизировано' : event.sync_status === 'conflict' ? 'Конфликт — требуется проверка' : event.sync_status === 'error' ? 'Ошибка отправки' : 'Только в Personal OS'}</small></div>{event.sync_status === 'conflict' ? <button className="secondary" onClick={() => void acceptGoogleVersion(event)} disabled={busy}>Принять версию Google</button> : <button className="secondary" onClick={() => void publish(event)} disabled={busy || selected.length === 0}>{event.google_event_id ? 'Обновить в Google' : 'Опубликовать'}</button>}</div>)}{!personalEvents.length && <div className="empty">Личных событий в этом диапазоне пока нет.</div>}</div>
       </article>
       <article className="panel"><div className="panel-title"><div><h3>Ближайшие события</h3><p>События на ближайшие 14 дней после последней синхронизации.</p></div><span className="duration">{sortedEvents.length} событий</span></div>
         <div className="calendar-event-list">{sortedEvents.map((event) => <div className="calendar-event-row" key={event.id}><time>{event.all_day ? 'Весь день' : new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(event.start_at))}</time><div><b>{event.title}</b><small>{event.all_day ? ' ' : new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit'}).format(new Date(event.end_at))}{event.description ? ` · ${event.description.slice(0,180)}` : ''}</small></div>{event.html_link && <a href={event.html_link} target="_blank" rel="noreferrer" aria-label="Открыть событие в Google Calendar"><ExternalLink size={14}/></a>}</div>)}{!sortedEvents.length && <div className="empty"><CalendarDays size={20}/><b>Событий пока нет</b><span>Сохрани выбор календарей и запусти синхронизацию.</span></div>}</div>
