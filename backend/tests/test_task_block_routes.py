@@ -6,6 +6,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.api.routes.task_blocks import (
+    _owned_block,
     create_task_block,
     delete_task_block,
     update_task_block,
@@ -133,3 +134,23 @@ def test_delete_task_block_removes_only_the_block() -> None:
     assert response.status_code == 204
     assert db.deleted is block
     assert db.committed
+
+
+def test_task_block_lookup_is_scoped_to_owner() -> None:
+    user_id = uuid4()
+
+    class RecordingSession(FakeSession):
+        statement = None
+
+        def scalar(self, statement):
+            self.statement = statement
+            return None
+
+    db = RecordingSession()
+
+    with pytest.raises(HTTPException) as error:
+        _owned_block(db, user_id, uuid4())
+
+    assert error.value.status_code == 404
+    assert db.statement is not None
+    assert "task_blocks.user_id" in str(db.statement)
