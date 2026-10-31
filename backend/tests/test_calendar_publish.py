@@ -252,7 +252,7 @@ def test_resolve_event_from_google_accepts_remote_version(monkeypatch) -> None:
     assert event.title == "Updated lecture"
     assert event.description == "Updated details"
     assert event.start_at == datetime(2026, 11, 3, 12, 0, tzinfo=timezone(timedelta(hours=3)))
-    assert event.end_at == datetime(2026, 11, 3, 13, 30, tzinfo=__import__("datetime").timezone(__import__("datetime").timedelta(hours=3)))
+    assert event.end_at == datetime(2026, 11, 3, 13, 30, tzinfo=timezone(timedelta(hours=3)))
     assert event.google_etag == '"version-2"'
     assert event.sync_status == "synced"
     assert db.committed and db.refreshed
