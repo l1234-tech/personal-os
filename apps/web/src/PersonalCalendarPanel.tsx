@@ -233,7 +233,8 @@ export default function PersonalCalendarPanel() {
               const startMinutes = start < day ? 0 : start.getHours() * 60 + start.getMinutes()
               const endMinutes = end > addDays(day, 1) ? 1440 : end.getHours() * 60 + end.getMinutes()
               const top = startMinutes / 60 * 52
-              const duration = (resizing?.id === event.id ? resizing.nextDuration : end.getTime() - start.getTime()) / 60000\n              const height = Math.max(25, duration / 60 * 52)
+              const duration = (resizing?.id === event.id ? resizing.nextDuration : end.getTime() - start.getTime()) / 60000
+              const height = Math.max(25, duration / 60 * 52)
               return <button
                 key={event.id}
                 className={`calendar-timed-event ${event.color}`}
