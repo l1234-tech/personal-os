@@ -26,8 +26,12 @@ def upgrade() -> None:
         sa.Column("google_calendar_id", sa.String(length=1024), nullable=True),
         sa.Column("google_event_id", sa.String(length=1024), nullable=True),
         sa.Column("sync_status", sa.String(length=24), nullable=False, server_default="local"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_personal_calendar_events_user_id", "personal_calendar_events", ["user_id"])
