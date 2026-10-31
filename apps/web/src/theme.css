@@ -562,3 +562,26 @@ button, input, select, textarea { font-family: inherit; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+
+.calendar-task-block-edit {
+  position: absolute;
+  top: 3px;
+  right: 25px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: inherit;
+  background: transparent;
+  opacity: .7;
+  cursor: pointer;
+  line-height: 1;
+}
+.calendar-task-block-edit:hover {
+  opacity: 1;
+  background: rgba(127, 127, 127, .18);
+}
