@@ -192,6 +192,8 @@ class PersonalCalendarEvent(Base):
     color: Mapped[str] = mapped_column(String(24), nullable=False, default="blue", server_default="blue")
     google_calendar_id: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     google_event_id: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    google_etag: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    google_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sync_status: Mapped[str] = mapped_column(String(24), nullable=False, default="local", server_default="local")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
