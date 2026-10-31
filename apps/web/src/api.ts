@@ -68,7 +68,7 @@ export type PersonalCalendarEvent = {
   color: "blue" | "violet" | "green" | "amber" | "rose" | "gray"
   google_calendar_id: string | null
   google_event_id: string | null
-  sync_status: "local" | "pending" | "synced" | "error"
+  sync_status: "local" | "pending" | "synced" | "error" | "conflict"
   created_at: string
   updated_at: string
 }
@@ -160,6 +160,7 @@ export const api = {
   syncGoogle: () => request<CalendarSyncResult>("/integrations/google/sync", { method: "POST" }),
   calendarEvents: (startAt: string, endAt: string) => request<CalendarEvent[]>(`/integrations/calendar/events?start_at=${encodeURIComponent(startAt)}&end_at=${encodeURIComponent(endAt)}`),
   personalCalendarEvents: (startAt: string, endAt: string) => request<PersonalCalendarEvent[]>(`/calendar/events?start_at=${encodeURIComponent(startAt)}&end_at=${encodeURIComponent(endAt)}`),
+  publishCalendarEvent: (id: string, calendarId: string) => request<PersonalCalendarEvent>(`/calendar/events/${encodeURIComponent(id)}/publish?calendar_id=${encodeURIComponent(calendarId)}`, { method: "POST" }),
   createCalendarEvent: (payload: { title: string; description?: string | null; start_at: string; end_at: string; all_day?: boolean; color?: PersonalCalendarEvent["color"] }) =>
     request<PersonalCalendarEvent>("/calendar/events", { method: "POST", body: JSON.stringify(payload) }),
   updateCalendarEvent: (id: string, payload: Partial<Pick<PersonalCalendarEvent, "title" | "description" | "start_at" | "end_at" | "all_day" | "color">>) =>
