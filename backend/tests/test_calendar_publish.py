@@ -58,6 +58,11 @@ class FakeGoogleClient:
         return next(self.responses)
 
 
+    def delete(self, url: str, **kwargs):
+        self.calls.append(("DELETE", {"url": url, **kwargs}))
+        return next(self.responses)
+
+
 def make_context(event=None):
     user_id = uuid4()
     integration = SimpleNamespace(id=uuid4())
@@ -283,3 +288,50 @@ def test_resolve_event_from_google_rejects_invalid_interval(monkeypatch) -> None
     assert error.value.status_code == 502
     assert event.title == original_title
     assert not db.committed
+
+def test_unpublish_event_deletes_google_copy_but_keeps_local_event(monkeypatch) -> None:
+    event = make_linked_event()
+    db, user, _integration, event = make_context(event)
+    client = FakeGoogleClient([FakeResponse({}, status_code=204)])
+    install_google_client(monkeypatch, client)
+
+    result = calendar_routes.unpublish_event_from_google(event.id, db, user)
+
+    assert result is event
+    assert event.google_calendar_id is None
+    assert event.google_event_id is None
+    assert event.google_etag is None
+    assert event.sync_status == "local"
+    assert event.title == "Lecture"
+    assert db.committed and db.refreshed
+    assert [method for method, _ in client.calls] == ["DELETE"]
+    assert client.calls[0][1]["headers"]["If-Match"] == '"version-1"'
+
+
+def test_unpublish_event_marks_conflict_if_google_version_changed(monkeypatch) -> None:
+    event = make_linked_event()
+    db, user, _integration, event = make_context(event)
+    client = FakeGoogleClient([FakeResponse({}, status_code=412)])
+    install_google_client(monkeypatch, client)
+
+    with pytest.raises(HTTPException) as error:
+        calendar_routes.unpublish_event_from_google(event.id, db, user)
+
+    assert error.value.status_code == 409
+    assert event.sync_status == "conflict"
+    assert event.google_event_id == "google-event-1"
+    assert db.committed
+
+
+def test_unpublish_event_unlinks_already_deleted_google_event(monkeypatch) -> None:
+    event = make_linked_event()
+    db, user, _integration, event = make_context(event)
+    client = FakeGoogleClient([FakeResponse({}, status_code=404)])
+    install_google_client(monkeypatch, client)
+
+    result = calendar_routes.unpublish_event_from_google(event.id, db, user)
+
+    assert result is event
+    assert event.google_event_id is None
+    assert event.sync_status == "local"
+    assert db.committed
