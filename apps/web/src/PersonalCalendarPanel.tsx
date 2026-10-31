@@ -36,6 +36,7 @@ export default function PersonalCalendarPanel() {
   const [endAt, setEndAt] = useState('')
   const [color, setColor] = useState<PersonalCalendarEvent['color']>('blue')
   const [saving, setSaving] = useState(false)
+  const [draggingEventId, setDraggingEventId] = useState<string | null>(null)
 
   const range = useMemo(() => {
     if (view === 'day') return { start: startOfDay(cursor), end: addDays(startOfDay(cursor), 1) }
@@ -118,6 +119,26 @@ export default function PersonalCalendarPanel() {
     }
   }
 
+  const moveEventToSlot = async (eventId: string, day: Date, hour: number) => {
+    const event = events.find((item) => item.id === eventId)
+    if (!event) return
+    const originalStart = new Date(event.start_at)
+    const originalEnd = new Date(event.end_at)
+    const duration = originalEnd.getTime() - originalStart.getTime()
+    const nextStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, 0)
+    const nextEnd = new Date(nextStart.getTime() + duration)
+    setDraggingEventId(null)
+    try {
+      await api.updateCalendarEvent(eventId, {
+        start_at: nextStart.toISOString(),
+        end_at: nextEnd.toISOString(),
+      })
+      await load()
+    } catch (err) {
+      setError(apiError(err))
+    }
+  }
+
   const days = useMemo(() => {
     const count = view === 'month' ? 42 : view === 'week' ? 7 : 1
     return Array.from({ length: count }, (_, index) => addDays(range.start, index))
@@ -173,7 +194,17 @@ export default function PersonalCalendarPanel() {
           const dayEvents = events.filter((event) => new Date(event.start_at) < addDays(day, 1) && new Date(event.end_at) > day)
           const dueTasks = tasks.filter((task) => task.due_at && task.status !== 'done' && task.status !== 'cancelled' && new Date(task.due_at) >= day && new Date(task.due_at) < addDays(day, 1))
           return <div className="calendar-time-column" key={day.toISOString()}>
-            {Array.from({ length: 24 }, (_, hour) => <button key={hour} className="calendar-time-slot" aria-label={`Создать событие ${dateLabel(day)} ${hour}:00`} onClick={() => openNew(day, hour, 0)} />)}
+            {Array.from({ length: 24 }, (_, hour) => <button
+              key={hour}
+              className="calendar-time-slot"
+              aria-label={`Создать событие ${dateLabel(day)} ${hour}:00`}
+              onClick={() => openNew(day, hour, 0)}
+              onDragOver={(event) => { if (draggingEventId) event.preventDefault() }}
+              onDrop={(event) => {
+                event.preventDefault()
+                if (draggingEventId) void moveEventToSlot(draggingEventId, day, hour)
+              }}
+            />)}
             {dueTasks.map((task) => {
               const due = new Date(task.due_at as string)
               const top = (due.getHours() * 60 + due.getMinutes()) / 60 * 52
@@ -186,7 +217,20 @@ export default function PersonalCalendarPanel() {
               const endMinutes = end > addDays(day, 1) ? 1440 : end.getHours() * 60 + end.getMinutes()
               const top = startMinutes / 60 * 52
               const height = Math.max(25, (endMinutes - startMinutes) / 60 * 52)
-              return <button key={event.id} className={`calendar-timed-event ${event.color}`} style={{ top, height }} onClick={() => openEdit(event)} title={`${event.title} · ${timeLabel(event.start_at)}–${timeLabel(event.end_at)}`}>
+              return <button
+                key={event.id}
+                className={`calendar-timed-event ${event.color}`}
+                style={{ top, height }}
+                draggable
+                onDragStart={(dragEvent) => {
+                  dragEvent.dataTransfer.effectAllowed = 'move'
+                  dragEvent.dataTransfer.setData('text/plain', event.id)
+                  setDraggingEventId(event.id)
+                }}
+                onDragEnd={() => setDraggingEventId(null)}
+                onClick={() => openEdit(event)}
+                title={`Перетащи, чтобы перенести · ${event.title} · ${timeLabel(event.start_at)}–${timeLabel(event.end_at)}`}
+              >
                 <b>{event.title}</b><span>{timeLabel(event.start_at)}–{timeLabel(event.end_at)}</span>
               </button>
             })}
