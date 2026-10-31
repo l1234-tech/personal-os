@@ -50,7 +50,7 @@ GOOGLE_SCOPES = [
     "email",
     "profile",
     "https://www.googleapis.com/auth/calendar.readonly",
-    "https://www.googleapis.com/auth/calendar.events.owned",
+    "https://www.googleapis.com/auth/calendar.events",
 ]
 OAUTH_STATE_TTL = timedelta(minutes=10)
 SYNC_RESOURCE_PREFIX = "google_calendar:"
