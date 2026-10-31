@@ -33,6 +33,16 @@ export type ApiTask = {
   updated_at: string
 }
 
+export type TaskBlock = {
+  id: string
+  task_id: string
+  title: string
+  start_at: string
+  end_at: string
+  status: string
+  created_at: string
+}
+
 export type TimerState = {
   id: string
   task_id: string | null
@@ -123,6 +133,10 @@ export const api = {
     }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
   tasks: () => request<ApiTask[]>("/tasks?limit=200"),
+  taskBlocks: (startAt: string, endAt: string) => request<TaskBlock[]>(`/task-blocks?start_at=${encodeURIComponent(startAt)}&end_at=${encodeURIComponent(endAt)}`),
+  createTaskBlock: (payload: { task_id: string; start_at: string; end_at: string }) => request<TaskBlock>("/task-blocks", { method: "POST", body: JSON.stringify(payload) }),
+  updateTaskBlock: (id: string, payload: { start_at?: string; end_at?: string }) => request<TaskBlock>(`/task-blocks/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteTaskBlock: (id: string) => request<void>(`/task-blocks/${encodeURIComponent(id)}`, { method: "DELETE" }),
   createTask: (payload: { title: string; category: string; priority: TaskPriority; estimated_minutes?: number }) =>
     request<ApiTask>("/tasks", { method: "POST", body: JSON.stringify(payload) }),
   updateTask: (id: string, payload: Partial<Pick<ApiTask, "title" | "description" | "status" | "priority" | "category" | "due_at" | "estimated_minutes">>) =>
