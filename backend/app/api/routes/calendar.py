@@ -13,12 +13,12 @@ from app.calendar_schemas import (
     PersonalCalendarEventUpdate,
 )
 from app.db import get_db
-from app.models import User
 from app.integrations.google_calendar import (
     GOOGLE_CALENDAR_API,
     calendar_events_url,
     get_access_token,
 )
+from app.models import User
 from app.models_integrations import CalendarSelection, Integration, PersonalCalendarEvent
 
 router = APIRouter(prefix="/calendar", tags=["personal calendar"])
