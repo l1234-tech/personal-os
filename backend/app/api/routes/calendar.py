@@ -117,6 +117,91 @@ def delete_event(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+def _google_event_datetime(value: object, field: str) -> tuple[datetime, bool]:
+    if not isinstance(value, dict):
+        raise HTTPException(status_code=502, detail=f"Google event has no valid {field}")
+    date_value = value.get("date")
+    date_time_value = value.get("dateTime")
+    try:
+        if isinstance(date_value, str):
+            parsed_date = datetime.fromisoformat(date_value).date()
+            return datetime.combine(parsed_date, datetime.min.time(), tzinfo=UTC), True
+        if isinstance(date_time_value, str):
+            parsed = datetime.fromisoformat(date_time_value.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                raise ValueError("Timezone is required")
+            return parsed, False
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=f"Google event has invalid {field}") from exc
+    raise HTTPException(status_code=502, detail=f"Google event has no valid {field}")
+
+
+@router.post("/events/{event_id}/resolve-google", response_model=PersonalCalendarEventRead)
+def resolve_event_from_google(
+    event_id: UUID,
+    db: Session = Depends(get_db),  # noqa: B008
+    user: User = Depends(get_current_user),  # noqa: B008
+) -> PersonalCalendarEvent:
+    """Replace the local event with its current Google version after an explicit user choice."""
+    event = _owned_event(db, user.id, event_id)
+    if not event.google_calendar_id or not event.google_event_id:
+        raise HTTPException(status_code=409, detail="This event is not linked to Google Calendar")
+    integration = db.scalar(
+        select(Integration).where(
+            Integration.user_id == user.id,
+            Integration.provider == "google_calendar",
+            Integration.status == "active",
+        )
+    )
+    if integration is None:
+        raise HTTPException(status_code=409, detail="Connect Google Calendar first")
+    access_token = get_access_token(db, integration)
+    url = calendar_events_url(event.google_calendar_id)
+    try:
+        with httpx.Client(timeout=20.0) as client:
+            response = client.get(
+                f"{url}/{event.google_event_id}",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="Could not load the Google event") from exc
+    if response.status_code == 404:
+        raise HTTPException(status_code=409, detail="The linked Google event no longer exists")
+    if response.status_code >= 400:
+        raise HTTPException(status_code=502, detail="Could not load the Google event")
+    remote = response.json()
+    if not isinstance(remote, dict):
+        raise HTTPException(status_code=502, detail="Google returned an invalid event")
+    title, etag = remote.get("summary"), remote.get("etag")
+    if not isinstance(title, str) or not title.strip() or not isinstance(etag, str):
+        raise HTTPException(status_code=502, detail="Google returned incomplete event data")
+    start_at, start_all_day = _google_event_datetime(remote.get("start"), "start")
+    end_at, end_all_day = _google_event_datetime(remote.get("end"), "end")
+    if start_all_day != end_all_day or end_at <= start_at:
+        raise HTTPException(status_code=502, detail="Google returned an invalid event interval")
+    description = remote.get("description")
+    if description is not None and not isinstance(description, str):
+        description = None
+    event.title = title.strip()
+    event.description = description
+    event.start_at = start_at
+    event.end_at = end_at
+    event.all_day = start_all_day
+    event.google_etag = etag
+    updated = remote.get("updated")
+    try:
+        event.google_updated_at = (
+            datetime.fromisoformat(updated.replace("Z", "+00:00")).astimezone(UTC)
+            if isinstance(updated, str)
+            else None
+        )
+    except ValueError:
+        event.google_updated_at = None
+    event.sync_status = "synced"
+    db.commit()
+    db.refresh(event)
+    return event
+
 @router.post("/events/{event_id}/publish", response_model=PersonalCalendarEventRead)
 def publish_event_to_google(
     event_id: UUID,
