@@ -510,3 +510,13 @@ button, input, select, textarea { font-family: inherit; }
   background:currentColor;
 }
 .calendar-timed-event { touch-action:pan-y; }
+
+.calendar-task-block {
+  position:absolute; z-index:1; left:5px; right:5px; overflow:hidden;
+  display:flex; flex-direction:column; gap:2px; padding:4px 7px;
+  border:1px dashed var(--accent); border-radius:6px;
+  background:var(--surface-soft); color:var(--text); font-size:10px;
+  pointer-events:none;
+}
+.calendar-task-block span { font-size:9px; opacity:.72; }
+.calendar-event-form select { width:100%; min-width:0; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--text); }
