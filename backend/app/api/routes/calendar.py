@@ -61,8 +61,8 @@ def list_events(
 )
 def create_event(
     payload: PersonalCalendarEventCreate,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),  # noqa: B008
+    user: User = Depends(get_current_user),  # noqa: B008
 ) -> PersonalCalendarEvent:
     event = PersonalCalendarEvent(user_id=user.id, **payload.model_dump())
     db.add(event)
