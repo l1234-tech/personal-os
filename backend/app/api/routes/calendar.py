@@ -75,8 +75,8 @@ def create_event(
 def update_event(
     event_id: UUID,
     payload: PersonalCalendarEventUpdate,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),  # noqa: B008
+    user: User = Depends(get_current_user),  # noqa: B008
 ) -> PersonalCalendarEvent:
     event = _owned_event(db, user.id, event_id)
     changes = payload.model_dump(exclude_unset=True)
@@ -102,8 +102,8 @@ def update_event(
 @router.delete("/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_event(
     event_id: UUID,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),  # noqa: B008
+    user: User = Depends(get_current_user),  # noqa: B008
 ) -> Response:
     event = _owned_event(db, user.id, event_id)
     db.delete(event)
