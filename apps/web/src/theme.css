@@ -525,8 +525,8 @@ button, input, select, textarea { font-family: inherit; }
 
 /* Scheduled task block controls and month indicators */
 .calendar-task-block {
-  position: relative;
-  padding-right: 24px;
+  position: absolute;
+  padding-right: 48px;
 }
 .calendar-task-block-remove {
   position: absolute;
@@ -585,3 +585,27 @@ button, input, select, textarea { font-family: inherit; }
   opacity: 1;
   background: rgba(127, 127, 127, .18);
 }
+
+
+.calendar-task-block-resize-handle {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 8px;
+  cursor: ns-resize;
+  touch-action: none;
+  opacity: .65;
+}
+.calendar-task-block-resize-handle::after {
+  content: '';
+  position: absolute;
+  left: calc(50% - 13px);
+  bottom: 2px;
+  width: 26px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+.calendar-task-block { touch-action: pan-y; }
