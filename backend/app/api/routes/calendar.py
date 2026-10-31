@@ -202,6 +202,57 @@ def resolve_event_from_google(
     db.refresh(event)
     return event
 
+
+@router.post("/events/{event_id}/unpublish-google", response_model=PersonalCalendarEventRead)
+def unpublish_event_from_google(
+    event_id: UUID,
+    db: Session = Depends(get_db),  # noqa: B008
+    user: User = Depends(get_current_user),  # noqa: B008
+) -> PersonalCalendarEvent:
+    """Delete the linked Google copy while keeping the Personal OS event."""
+    event = _owned_event(db, user.id, event_id)
+    if not event.google_calendar_id or not event.google_event_id or not event.google_etag:
+        raise HTTPException(status_code=409, detail="This event has no complete Google link")
+    integration = db.scalar(
+        select(Integration).where(
+            Integration.user_id == user.id,
+            Integration.provider == "google_calendar",
+            Integration.status == "active",
+        )
+    )
+    if integration is None:
+        raise HTTPException(status_code=409, detail="Connect Google Calendar first")
+    access_token = get_access_token(db, integration)
+    url = calendar_events_url(event.google_calendar_id)
+    try:
+        with httpx.Client(timeout=20.0) as client:
+            response = client.delete(
+                f"{url}/{event.google_event_id}",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "If-Match": event.google_etag,
+                },
+            )
+    except httpx.HTTPError as exc:
+        event.sync_status = "error"
+        db.commit()
+        raise HTTPException(status_code=502, detail="Could not delete the Google event") from exc
+    if response.status_code == 412:
+        event.sync_status = "conflict"
+        db.commit()
+        raise HTTPException(status_code=409, detail="Google event changed; review it before deleting")
+    if response.status_code not in {204, 404}:
+        event.sync_status = "error"
+        db.commit()
+        raise HTTPException(status_code=502, detail="Google rejected the event deletion")
+    event.google_calendar_id = None
+    event.google_event_id = None
+    event.google_etag = None
+    event.google_updated_at = None
+    event.sync_status = "local"
+    db.commit()
+    db.refresh(event)
+    return event
 @router.post("/events/{event_id}/publish", response_model=PersonalCalendarEventRead)
 def publish_event_to_google(
     event_id: UUID,
