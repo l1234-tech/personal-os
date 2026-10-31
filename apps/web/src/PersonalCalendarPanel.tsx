@@ -251,10 +251,8 @@ export default function PersonalCalendarPanel() {
                 <b>{event.title}</b><span>{timeLabel(event.start_at)}–{timeLabel(event.end_at)}</span>
                 <span
                   className="calendar-event-resize-handle"
-                  role="slider"
-                  aria-label="Изменить длительность события"
-                  aria-valuemin={15}
-                  aria-valuenow={Math.round(duration)}
+                  aria-hidden="true"
+                  onClick={(clickEvent) => clickEvent.stopPropagation()}
                   onPointerDown={(pointerEvent) => {
                     pointerEvent.stopPropagation()
                     pointerEvent.preventDefault()
