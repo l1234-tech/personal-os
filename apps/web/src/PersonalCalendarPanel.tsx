@@ -28,6 +28,7 @@ export default function PersonalCalendarPanel() {
   const [tasks, setTasks] = useState<ApiTask[]>([])
   const [taskBlocks, setTaskBlocks] = useState<TaskBlock[]>([])
   const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [editingTaskBlock, setEditingTaskBlock] = useState<TaskBlock | null>(null)
   const [scheduleTaskId, setScheduleTaskId] = useState('')
   const [scheduleStart, setScheduleStart] = useState('')
   const [scheduleEnd, setScheduleEnd] = useState('')
@@ -87,9 +88,17 @@ export default function PersonalCalendarPanel() {
   const openSchedule = () => {
     const start = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), 10, 0)
     const end = new Date(start.getTime() + 60 * 60 * 1000)
+    setEditingTaskBlock(null)
     setScheduleTaskId(tasks.find((task) => task.status !== 'done' && task.status !== 'cancelled')?.id ?? '')
     setScheduleStart(toLocalInput(start))
     setScheduleEnd(toLocalInput(end))
+    setScheduleOpen(true)
+  }
+  const openTaskBlock = (block: TaskBlock) => {
+    setEditingTaskBlock(block)
+    setScheduleTaskId(block.task_id)
+    setScheduleStart(toLocalInput(new Date(block.start_at)))
+    setScheduleEnd(toLocalInput(new Date(block.end_at)))
     setScheduleOpen(true)
   }
   const saveTaskBlock = async (event: FormEvent) => {
@@ -100,8 +109,11 @@ export default function PersonalCalendarPanel() {
     }
     setSaving(true)
     try {
-      await api.createTaskBlock({ task_id: scheduleTaskId, start_at: new Date(scheduleStart).toISOString(), end_at: new Date(scheduleEnd).toISOString() })
+      const interval = { start_at: new Date(scheduleStart).toISOString(), end_at: new Date(scheduleEnd).toISOString() }
+      if (editingTaskBlock) await api.updateTaskBlock(editingTaskBlock.id, interval)
+      else await api.createTaskBlock({ task_id: scheduleTaskId, ...interval })
       setScheduleOpen(false)
+      setEditingTaskBlock(null)
       await load()
     } catch (err) { setError(apiError(err)) } finally { setSaving(false) }
   }
@@ -287,7 +299,7 @@ export default function PersonalCalendarPanel() {
               return <div key={block.id} className="calendar-task-block" style={{ top: blockStartMinutes / 60 * 52, height: Math.max(24, (blockEndMinutes - blockStartMinutes) / 60 * 52) }} title={`Перетащи, чтобы перенести · ${block.title}`} draggable
                 onDragStart={(dragEvent) => { dragEvent.dataTransfer.effectAllowed = 'move'; dragEvent.dataTransfer.setData('text/plain', block.id); setDraggingTaskBlockId(block.id) }}
                 onDragEnd={() => setDraggingTaskBlockId(null)}>
-                <b>{block.title}</b><span>{timeLabel(block.start_at)}–{timeLabel(block.end_at)}</span><button type="button" className="calendar-task-block-remove" aria-label={`Удалить блок: ${block.title}`} title="Убрать из календаря" onClick={(clickEvent) => { clickEvent.stopPropagation(); void removeTaskBlock(block) }}>×</button>
+                <b>{block.title}</b><span>{timeLabel(block.start_at)}–{timeLabel(block.end_at)}</span><button type="button" className="calendar-task-block-edit" aria-label={`Изменить время: ${block.title}`} title="Изменить время" onClick={(clickEvent) => { clickEvent.stopPropagation(); openTaskBlock(block) }}>↗</button><button type="button" className="calendar-task-block-remove" aria-label={`Удалить блок: ${block.title}`} title="Убрать из календаря" onClick={(clickEvent) => { clickEvent.stopPropagation(); void removeTaskBlock(block) }}>×</button>
               </div>
             })}
             {dueTasks.map((task) => {
@@ -350,10 +362,10 @@ export default function PersonalCalendarPanel() {
     {!events.length && !loading && <div className="calendar-empty-state">Пока нет событий. Нажми на дату или «Событие», чтобы добавить первое.</div>}
     {scheduleOpen && <div className="calendar-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setScheduleOpen(false) }}>
       <form className="calendar-event-form" onSubmit={(event) => void saveTaskBlock(event)}>
-        <div className="calendar-form-heading"><div><span>ПЛАНИРОВАНИЕ</span><h3>Запланировать задачу</h3></div><button type="button" className="quiet" onClick={() => setScheduleOpen(false)} aria-label="Закрыть"><X size={18}/></button></div>
-        <label>Задача<select value={scheduleTaskId} onChange={(event) => setScheduleTaskId(event.target.value)} required><option value="">Выбери задачу</option>{tasks.filter((task) => task.status !== 'done' && task.status !== 'cancelled').map((task) => <option key={task.id} value={task.id}>{task.title}</option>)}</select></label>
+        <div className="calendar-form-heading"><div><span>ПЛАНИРОВАНИЕ</span><h3>{editingTaskBlock ? 'Изменить время задачи' : 'Запланировать задачу'}</h3></div><button type="button" className="quiet" onClick={() => setScheduleOpen(false)} aria-label="Закрыть"><X size={18}/></button></div>
+        {!editingTaskBlock && <label>Задача<select value={scheduleTaskId} onChange={(event) => setScheduleTaskId(event.target.value)} required><option value="">Выбери задачу</option>{tasks.filter((task) => task.status !== 'done' && task.status !== 'cancelled').map((task) => <option key={task.id} value={task.id}>{task.title}</option>)}</select></label>}
         <div className="calendar-form-times"><label>Начало<input type="datetime-local" value={scheduleStart} onChange={(event) => setScheduleStart(event.target.value)} required/></label><label>Окончание<input type="datetime-local" value={scheduleEnd} onChange={(event) => setScheduleEnd(event.target.value)} required/></label></div>
-        <div className="calendar-form-actions"><button type="button" className="secondary" onClick={() => setScheduleOpen(false)}>Отмена</button><button type="submit" className="primary" disabled={saving || !tasks.some((task) => task.id === scheduleTaskId)}>{saving ? 'Сохраняю…' : 'Запланировать'}</button></div>
+        <div className="calendar-form-actions"><button type="button" className="secondary" onClick={() => setScheduleOpen(false)}>Отмена</button><button type="submit" className="primary" disabled={saving || !tasks.some((task) => task.id === scheduleTaskId)}>{saving ? 'Сохраняю…' : editingTaskBlock ? 'Сохранить время' : 'Запланировать'}</button></div>
       </form>
     </div>}
     {composer && <div className="calendar-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setComposer(false) }}>
